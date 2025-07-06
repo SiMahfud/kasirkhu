@@ -4,7 +4,12 @@ Aplikasi kasir sederhana untuk Toko Khumaira yang melayani berbagai jasa seperti
 
 ## Fitur Aplikasi
 
-Berikut adalah daftar fitur yang direncanakan untuk aplikasi ini:
+Berikut adalah daftar fitur yang direncanakan untuk aplikasi ini.
+
+**Legenda Status:**
+*   `[ ]` : Belum dimulai
+*   `[/]` : Sedang dikerjakan
+*   `[x]` : Selesai
 
 ### Manajemen Produk/Layanan
 - [ ] Tambah Produk/Layanan Baru

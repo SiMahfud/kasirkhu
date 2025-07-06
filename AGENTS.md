@@ -31,34 +31,34 @@ Dokumen ini berisi rencana pengembangan untuk aplikasi kasir Toko Khumaira. Ditu
 
 Pengembangan akan dibagi menjadi beberapa tahapan (sprint) untuk memastikan progres yang terukur dan memungkinkan adanya feedback berkelanjutan. **Catatan Penting:** Setelah menyelesaikan pengembangan atau modifikasi signifikan pada setiap komponen (Model, Controller, View, Migration, Seeder), **wajib** menjalankan atau membuat unit/feature test yang relevan menggunakan framework testing bawaan CodeIgniter (`php spark test`) untuk memastikan fungsionalitas dan mencegah regresi.
 
-### Sprint 1: Inisialisasi Proyek dan Fitur Inti Produk/Layanan
-1.  **Setup Proyek CodeIgniter 4:**
+### Sprint 1: Inisialisasi Proyek dan Fitur Inti Produk/Layanan (Status: Belum dimulai)
+1.  **Setup Proyek CodeIgniter 4:** (Status: Belum dimulai)
     *   Instalasi CodeIgniter 4 via Composer.
     *   Konfigurasi dasar (environment, database, base URL, app.php).
     *   Integrasi Bootstrap 5 (misalnya, melalui CDN atau download aset lokal).
     *   Setup Git repository.
-2.  **Desain Database Awal:**
+2.  **Desain Database Awal:** (Status: Belum dimulai)
     *   Tabel `products` (id, name, code, category_id, price, unit, description, stock, created_at, updated_at).
     *   Tabel `categories` (id, name, description, created_at, updated_at).
     *   Tabel `users` (id, name, username, password, role, created_at, updated_at) - `role` bisa enum ('admin', 'cashier').
     *   Gunakan Migrations CodeIgniter untuk membuat skema database.
-3.  **Modul Manajemen Kategori (CRUD):**
+3.  **Modul Manajemen Kategori (CRUD):** (Status: Belum dimulai)
     *   Controller, Model, Views untuk Tambah, Lihat, Edit, Hapus Kategori.
-4.  **Modul Manajemen Produk/Layanan (CRUD):**
+4.  **Modul Manajemen Produk/Layanan (CRUD):** (Status: Belum dimulai)
     *   Controller, Model, Views untuk Tambah, Lihat (dengan pagination, pencarian dasar), Edit, Hapus Produk/Layanan.
     *   Relasi ke tabel kategori.
-5.  **Autentikasi Dasar:**
+5.  **Autentikasi Dasar:** (Status: Belum dimulai)
     *   Halaman Login.
     *   Controller untuk proses login dan logout.
     *   Penggunaan Session CodeIgniter untuk manajemen status login.
     *   Filter untuk melindungi route yang memerlukan autentikasi.
 
-### Sprint 2: Fitur Inti Transaksi
-1.  **Desain Database Transaksi:**
+### Sprint 2: Fitur Inti Transaksi (Status: Belum dimulai)
+1.  **Desain Database Transaksi:** (Status: Belum dimulai)
     *   Tabel `transactions` (id, transaction_code, user_id, customer_name (opsional), total_amount, discount, final_amount, payment_method, created_at).
     *   Tabel `transaction_details` (id, transaction_id, product_id, quantity, price_per_unit, subtotal).
     *   Gunakan Migrations.
-2.  **Modul Transaksi Penjualan:**
+2.  **Modul Transaksi Penjualan:** (Status: Belum dimulai)
     *   Antarmuka (View dengan Bootstrap) untuk input transaksi baru:
         *   Pemilihan produk/layanan (misalnya, dropdown dengan pencarian atau autocomplete).
         *   Input jumlah/kuantitas.
@@ -66,53 +66,53 @@ Pengembangan akan dibagi menjadi beberapa tahapan (sprint) untuk memastikan prog
         *   Input diskon.
     *   Controller untuk memproses dan menyimpan data transaksi ke tabel `transactions` dan `transaction_details`.
     *   Pengurangan stok produk ATK secara otomatis (jika produk memiliki flag 'is_stock_managed').
-3.  **Riwayat Transaksi Sederhana:**
+3.  **Riwayat Transaksi Sederhana:** (Status: Belum dimulai)
     *   Menampilkan daftar transaksi (dengan pagination).
     *   Menampilkan detail per transaksi (termasuk item-item yang dibeli).
 
-### Sprint 3: Penyempurnaan Transaksi dan Laporan Awal
-1.  **Pencetakan Struk/Nota:**
+### Sprint 3: Penyempurnaan Transaksi dan Laporan Awal (Status: Belum dimulai)
+1.  **Pencetakan Struk/Nota:** (Status: Belum dimulai)
     *   Desain template struk (HTML/CSS untuk Bootstrap) yang bisa dicetak.
     *   Fungsi untuk menghasilkan halaman struk yang siap cetak (window.print() atau konversi ke PDF sederhana jika memungkinkan).
     *   Menampilkan informasi toko di struk.
-2.  **Manajemen Stok ATK (Lanjutan):**
+2.  **Manajemen Stok ATK (Lanjutan):** (Status: Belum dimulai)
     *   View untuk melihat sisa stok produk.
     *   Fitur sederhana untuk penyesuaian/penambahan stok manual (oleh Admin).
-3.  **Laporan Penjualan Dasar:**
+3.  **Laporan Penjualan Dasar:** (Status: Belum dimulai)
     *   Laporan penjualan harian (total omset, jumlah transaksi).
     *   Laporan produk/layanan terlaris (berdasarkan kuantitas terjual dalam periode tertentu).
     *   Filter laporan berdasarkan rentang tanggal.
-4.  **Perhitungan Spesifik Toko Khumaira (Implementasi Awal):**
+4.  **Perhitungan Spesifik Toko Khumaira (Implementasi Awal):** (Status: Belum dimulai)
     *   Untuk jasa fotokopi/print: form input jumlah halaman, jenis kertas, warna/hitam-putih. Harga dihitung berdasarkan parameter ini. Produk jasa ini bisa memiliki harga dasar 0, dan harga final dihitung di transaksi.
     *   Untuk jasa desain/edit/banner: input harga manual saat transaksi atau produk dengan harga fleksibel.
 
-### Sprint 4: Pengaturan dan Pengguna
-1.  **Modul Pengaturan Toko:**
+### Sprint 4: Pengaturan dan Pengguna (Status: Belum dimulai)
+1.  **Modul Pengaturan Toko:** (Status: Belum dimulai)
     *   Form untuk Admin mengubah informasi toko (nama, alamat, kontak, pesan di struk). Simpan di tabel `settings` atau file konfigurasi.
-2.  **Manajemen Pengguna (CRUD):**
+2.  **Manajemen Pengguna (CRUD):** (Status: Belum dimulai)
     *   Antarmuka untuk Admin menambah, melihat, mengedit, menghapus pengguna (Kasir/Admin lain).
     *   Pengaturan role pengguna.
-3.  **Pengaturan Printer (Panduan):**
+3.  **Pengaturan Printer (Panduan):** (Status: Belum dimulai)
     *   Dokumentasi singkat cara setup printer default di browser untuk pencetakan struk.
 
-### Sprint 5: Fitur Tambahan dan Finalisasi
-1.  **Manajemen Pelanggan (Opsional):**
+### Sprint 5: Fitur Tambahan dan Finalisasi (Status: Belum dimulai)
+1.  **Manajemen Pelanggan (Opsional):** (Status: Belum dimulai)
     *   Tabel `customers` (id, name, phone, email, address).
     *   CRUD Pelanggan.
     *   Menghubungkan transaksi dengan pelanggan (opsional saat input transaksi).
-2.  **Laporan Lanjutan:**
+2.  **Laporan Lanjutan:** (Status: Belum dimulai)
     *   Laporan penjualan mingguan dan bulanan.
     *   Laporan laba rugi sederhana (jika harga pokok produk diinput).
-3.  **Penyempurnaan UI/UX:**
+3.  **Penyempurnaan UI/UX:** (Status: Belum dimulai)
     *   Review dan perbaikan alur pengguna.
     *   Pastikan responsivitas dengan Bootstrap.
     *   Validasi input yang lebih komprehensif (sisi klien dan server).
     *   Notifikasi/feedback pengguna yang lebih baik (misalnya menggunakan Toast Bootstrap).
-4.  **Testing dan Bug Fixing:**
+4.  **Testing dan Bug Fixing:** (Status: Belum dimulai)
     *   Pengujian manual menyeluruh semua fitur.
     *   (Jika ada) Penulisan Unit Test dasar untuk logika bisnis kritis di Model.
     *   Perbaikan bug yang ditemukan.
-5.  **Dokumentasi Pengguna (Sederhana):**
+5.  **Dokumentasi Pengguna (Sederhana):** (Status: Belum dimulai)
     *   Panduan singkat cara penggunaan fitur-fitur utama aplikasi untuk Admin dan Kasir.
 
 ## 4. Panduan Kontribusi (Jika Open Source)
