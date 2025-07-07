@@ -29,19 +29,27 @@ Dokumen ini berisi rencana pengembangan untuk aplikasi kasir Toko Khumaira. Ditu
 
 ## 3. Tahapan Pengembangan (Sprint)
 
-Pengembangan akan dibagi menjadi beberapa tahapan (sprint) untuk memastikan progres yang terukur dan memungkinkan adanya feedback berkelanjutan. **Catatan Penting:** Setelah menyelesaikan pengembangan atau modifikasi signifikan pada setiap komponen (Model, Controller, View, Migration, Seeder), **wajib** menjalankan atau membuat unit/feature test yang relevan menggunakan framework testing bawaan CodeIgniter (`php spark test`) untuk memastikan fungsionalitas dan mencegah regresi.
+Pengembangan akan dibagi menjadi beberapa tahapan (sprint) untuk memastikan progres yang terukur dan memungkinkan adanya feedback berkelanjutan.
+
+> **Catatan Penting tentang Pengujian (Testing):** Pengujian adalah bagian integral dari siklus pengembangan proyek ini. Setelah menyelesaikan setiap fitur atau perbaikan bug, kontributor **wajib** membuat atau memperbarui pengujian yang relevan untuk memverifikasi fungsionalitas dan mencegah regresi di masa depan.
+>
+> *   **Pengujian Controller (Feature Tests):** Gunakan `CodeIgniter\Test\FeatureTestTrait` untuk mensimulasikan permintaan HTTP ke aplikasi Anda. Ini memungkinkan verifikasi respons, seperti status HTTP, header, dan konten JSON atau HTML yang dikembalikan.
+> *   **Pengujian Model (Database Tests):** Gunakan `CodeIgniter\Test\DatabaseTestTrait` untuk menguji logika bisnis yang berinteraksi langsung dengan database. *Trait* ini sangat berguna karena secara otomatis me-reset dan menjalankan migrasi pada database pengujian sebelum setiap tes, memastikan lingkungan yang bersih dan terisolasi.
+>
+> Seluruh rangkaian pengujian (test suite) harus berhasil dijalankan menggunakan perintah `composer test` sebelum kode digabungkan (merge). Ini adalah garda terdepan kita untuk menjaga kualitas dan stabilitas kode.
 
 ### Sprint 1: Inisialisasi Proyek dan Fitur Inti Produk/Layanan (Status: Belum dimulai)
 1.  **Setup Proyek CodeIgniter 4:** (Status: Belum dimulai)
-    *   Instalasi CodeIgniter 4 via Composer.
+    *   Instalasi CodeIgniter 4 via Composer. (Selesai)
     *   Konfigurasi dasar (environment, database, base URL, app.php).
     *   Integrasi Bootstrap 5 (misalnya, melalui CDN atau download aset lokal).
-    *   Setup Git repository.
+    *   Setup Git repository. (Selesai)
 2.  **Desain Database Awal:** (Status: Belum dimulai)
     *   Tabel `products` (id, name, code, category_id, price, unit, description, stock, created_at, updated_at).
     *   Tabel `categories` (id, name, description, created_at, updated_at).
     *   Tabel `users` (id, name, username, password, role, created_at, updated_at) - `role` bisa enum ('admin', 'cashier').
     *   Gunakan Migrations CodeIgniter untuk membuat skema database.
+    *   Gunakan sqlite untuk sementara dalam pengembangan di environtmen.
 3.  **Modul Manajemen Kategori (CRUD):** (Status: Belum dimulai)
     *   Controller, Model, Views untuk Tambah, Lihat, Edit, Hapus Kategori.
 4.  **Modul Manajemen Produk/Layanan (CRUD):** (Status: Belum dimulai)
@@ -110,7 +118,6 @@ Pengembangan akan dibagi menjadi beberapa tahapan (sprint) untuk memastikan prog
     *   Notifikasi/feedback pengguna yang lebih baik (misalnya menggunakan Toast Bootstrap).
 4.  **Testing dan Bug Fixing:** (Status: Belum dimulai)
     *   Pengujian manual menyeluruh semua fitur.
-    *   (Jika ada) Penulisan Unit Test dasar untuk logika bisnis kritis di Model.
     *   Perbaikan bug yang ditemukan.
 5.  **Dokumentasi Pengguna (Sederhana):** (Status: Belum dimulai)
     *   Panduan singkat cara penggunaan fitur-fitur utama aplikasi untuk Admin dan Kasir.
@@ -124,7 +131,6 @@ Pengembangan akan dibagi menjadi beberapa tahapan (sprint) untuk memastikan prog
     4.  Jalankan migrasi (`php spark migrate`).
     5.  Jalankan seeder jika ada (`php spark db:seed <NamaSeeder>`).
     6.  Jalankan development server (`php spark serve`).
-    7.  **Testing:** Setelah membuat atau memodifikasi kode (Model, Controller, Library, dll.), jalankan test suite (`php spark test`). Jika Anda menambahkan fungsionalitas baru atau memperbaiki bug, diharapkan untuk menulis test case baru atau memperbarui yang sudah ada untuk mencakup perubahan tersebut. Familiarisasi diri Anda dengan panduan testing CodeIgniter 4.
 *   **Coding Style:**
     *   Mengikuti standar PSR-12 (Extended Coding Style). Gunakan tools seperti PHP CS Fixer jika memungkinkan.
     *   Komentari kode yang kompleks atau tidak jelas.
@@ -133,15 +139,158 @@ Pengembangan akan dibagi menjadi beberapa tahapan (sprint) untuk memastikan prog
     1.  Buat _fork_ dari repository utama.
     2.  Buat _branch_ baru dari `main` atau `develop` untuk setiap fitur atau perbaikan bug (misalnya, `feature/nama-fitur` atau `fix/bug-deskripsi`).
     3.  Commit perubahan secara berkala dengan pesan commit yang jelas dan deskriptif (misalnya, "feat: Add user login functionality").
-    4.  Pastikan semua test lolos (`php spark test`) sebelum membuat Pull Request.
+    4.  Pastikan semua test lolos (`composer test`) sebelum membuat Pull Request.
     5.  Buat Pull Request ke branch `main` atau `develop` di repository utama. Jelaskan perubahan yang dibuat dan pastikan semua automated checks (jika ada) lolos.
 *   **Issue Tracker:** Gunakan GitHub Issues untuk melaporkan bug atau mengusulkan fitur baru.
 
-## 5. Lisensi
+## 5. Pengujian (Testing)
+
+Pengujian adalah pilar utama dalam pengembangan aplikasi ini untuk memastikan kualitas, stabilitas, dan kemudahan pemeliharaan. Semua kontribusi dalam bentuk fitur baru atau perbaikan bug harus menyertakan pengujian yang relevan. CodeIgniter 4 memiliki dukungan pengujian kelas satu menggunakan PHPUnit.
+
+#### a. Konfigurasi Lingkungan Pengujian
+
+Sebelum menjalankan pengujian, pastikan lingkungan Anda terkonfigurasi dengan benar.
+
+1.  **Salin File Konfigurasi PHPUnit:** Salin file `phpunit.xml.dist` menjadi `phpunit.xml`. File `phpunit.xml` ini akan digunakan untuk konfigurasi lokal Anda dan tidak akan di-commit ke Git.
+    ```bash
+    cp phpunit.xml.dist phpunit.xml
+    ```
+2.  **Konfigurasi Database Pengujian:** Untuk menjaga integritas database pengembangan Anda, pengujian akan berjalan pada database terpisah. Buka file `phpunit.xml` dan atur variabel database di dalam bagian `<php>`. Sangat disarankan untuk menggunakan database **SQLite** yang berjalan di memori karena kecepatannya dan tidak memerlukan setup server database.
+
+    ```xml
+    <!-- phpunit.xml -->
+    <php>
+        <server name="app.baseURL" value="http://localhost:8080/"/>
+        <env name="database.default.hostname" value="localhost"/>
+        <env name="database.default.database" value="ci4_test_db"/> <!-- Atau nama database tes Anda -->
+        <env name="database.default.username" value="root"/>
+        <env name="database.default.password" value=""/>
+        <env name="database.default.DBDriver" value="MySQLi"/>
+
+        <!-- Contoh Konfigurasi untuk SQLite in-memory (Direkomendasikan) -->
+        <!-- <env name="database.default.database" value=":memory:"/> -->
+        <!-- <env name="database.default.DBDriver" value="SQLite3"/> -->
+    </php>
+    ```
+
+#### b. Menjalankan Pengujian
+
+Untuk menjalankan seluruh rangkaian pengujian, gunakan perintah Composer dari direktori root proyek.
+
+```bash
+composer test
+```
+
+**Penting:** Selalu gunakan `composer test`. Perintah ini adalah alias yang telah dikonfigurasi dalam `composer.json` untuk menjalankan PHPUnit dengan bootstrap CodeIgniter. Menjalankannya memastikan semua layanan dan konfigurasi kerangka kerja dimuat dengan benar sebelum pengujian dimulai. Jangan menjalankan `vendor/bin/phpunit` secara langsung.
+
+#### c. Membuat File Pengujian
+
+CodeIgniter 4 menyediakan perintah Spark untuk mempercepat pembuatan file pengujian.
+
+```bash
+# Membuat file Feature Test
+php spark make:test Feature/TransactionTest
+
+# Membuat file Unit Test
+php spark make:test Unit/PriceCalculatorTest
+```
+
+Perintah ini akan membuat file kerangka (boilerplate) di dalam direktori `tests/Feature` atau `tests/Unit`.
+
+#### d. Menulis Pengujian
+
+Berikut adalah panduan dan contoh untuk jenis pengujian yang paling umum di proyek ini.
+
+##### Feature Tests (Untuk Controller dan Routes)
+Gunakan `CodeIgniter\Test\FeatureTestTrait` untuk menguji endpoint dari aplikasi Anda seolah-olah diakses melalui browser.
+
+```php
+// tests/Feature/ProductControllerTest.php
+namespace Tests\Feature;
+
+use CodeIgniter\Test\CIUnitTestCase;
+use CodeIgniter\Test\DatabaseTestTrait;
+use CodeIgniter\Test\FeatureTestTrait;
+
+class ProductControllerTest extends CIUnitTestCase
+{
+    use DatabaseTestTrait; // Gunakan jika endpoint berinteraksi dengan DB
+    use FeatureTestTrait;
+
+    // Otomatis dijalankan sebelum setiap tes di kelas ini
+    protected function setUp(): void
+    {
+        parent::setUp();
+        // Jalankan seeder jika perlu data awal
+        // $this->seed('CategorySeeder');
+        // $this->seed('ProductSeeder');
+    }
+
+    public function testCanViewProductListPage()
+    {
+        // Simulasikan request GET ke /products
+        $result = $this->get('/products');
+
+        // Lakukan assertions (pemeriksaan)
+        $result->assertStatus(200);
+        $result->assertSee('Daftar Produk');
+        $result->assertSee('Nama Produk Uji'); // Cek apakah data dari seeder tampil
+    }
+
+    public function testAdminCanDeleteProduct()
+    {
+        // Simulasikan user admin login (jika menggunakan fitur `actAs`)
+        // $admin = model('UserModel')->find(1);
+        // $this->actingAs($admin);
+
+        // Kirim request DELETE ke endpoint. Gantilah '1' dengan ID produk yang valid.
+        $result = $this->delete('/products/1');
+
+        $result->assertStatus(302); // Asumsi redirect setelah delete
+        $result->assertRedirectTo('/products');
+
+        // Pastikan data tidak lagi ada di database
+        $this->dontSeeInDatabase('products', ['id' => 1]);
+    }
+}
+```
+
+##### Database Tests (Untuk Model)
+Gunakan `CodeIgniter\Test\DatabaseTestTrait` untuk menguji metode dalam Model Anda.
+
+```php
+// tests/Models/ProductModelTest.php
+namespace Tests\Models;
+
+use CodeIgniter\Test\CIUnitTestCase;
+use CodeIgniter\Test\DatabaseTestTrait;
+use App\Models\ProductModel;
+
+class ProductModelTest extends CIUnitTestCase
+{
+    use DatabaseTestTrait;
+
+    // Kita tidak ingin migrasi berjalan untuk setiap tes, cukup sekali per kelas.
+    protected $migrate = true;
+    // Tentukan seeder yang akan dijalankan sekali untuk kelas ini.
+    protected $seed = 'ProductSeeder';
+
+    public function testFindProductById()
+    {
+        $model = new ProductModel();
+        $product = $model->find(1); // Asumsi ID 1 dibuat oleh ProductSeeder
+
+        $this->assertIsObject($product);
+        $this->assertEquals('Nama Produk Uji Dari Seeder', $product->name);
+    }
+}
+```
+
+## 6. Lisensi
 
 Proyek ini akan dirilis di bawah lisensi **[NAMA LISENSI, misalnya MIT License atau GNU GPLv3]**. (Akan ditentukan kemudian jika proyek menjadi open source).
 
-## 6. Prioritas Pengembangan
+## 7. Prioritas Pengembangan
 Fitur-fitur akan diprioritaskan berdasarkan kebutuhan inti operasional toko:
 1.  Manajemen Produk/Layanan & Kategori.
 2.  Autentikasi & Manajemen Pengguna Dasar.
@@ -152,5 +301,3 @@ Fitur-fitur akan diprioritaskan berdasarkan kebutuhan inti operasional toko:
 ## Catatan Tambahan
 *   Desain UI/UX akan mengutamakan fungsionalitas dan kemudahan penggunaan dengan komponen Bootstrap 5.
 *   Rencana ini bersifat fleksibel dan dapat disesuaikan seiring berjalannya proyek dan berdasarkan feedback.
-
-Rencana ini bersifat fleksibel dan dapat disesuaikan seiring berjalannya proyek dan berdasarkan feedback.
