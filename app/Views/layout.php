@@ -27,6 +27,9 @@
                 <li class="nav-item">
                     <a class="nav-link" href="<?= site_url('products') // Nanti ?>">Produk</a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="<?= site_url('transactions') ?>">Transaksi</a>
+                </li>
                 <!-- Tambahkan menu lain di sini -->
             </ul>
             <ul class="navbar-nav ms-auto">
