@@ -20,15 +20,27 @@ class CategoryCRUDTest extends CIUnitTestCase
     protected $namespace = 'App'; // Tentukan namespace migrasi yang akan dijalankan
 
     protected $model;
+    protected array $adminSessionData;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->model = new CategoryModel();
 
-        // Jika Anda memiliki seeder khusus untuk kategori yang selalu dibutuhkan
-        // $this->seed('CategorySeeder');
-        // Namun, untuk CRUD, lebih baik membuat data spesifik dalam tes.
+        // Seed admin user for authentication
+        $this->seed('AdminUserSeeder');
+        $adminUser = db_connect()->table('users')->where('username', 'admin')->get()->getRow();
+        if (!$adminUser) {
+            $this->fail('Admin user "admin" not found after seeding. Check AdminUserSeeder.');
+        }
+
+        $this->adminSessionData = [
+            'user_id'    => $adminUser->id,
+            'username'   => $adminUser->username,
+            'name'       => $adminUser->name,
+            'role'       => $adminUser->role,
+            'isLoggedIn' => true,
+        ];
     }
 
     public function testCanViewCategoryListPage()
@@ -39,7 +51,7 @@ class CategoryCRUDTest extends CIUnitTestCase
             ['name' => 'Perabotan', 'description' => 'Perabotan untuk rumah dan kantor'],
         ]);
 
-        $result = $this->get('/categories');
+        $result = $this->withSession($this->adminSessionData)->get('/categories');
 
         $result->assertStatus(200);
         $result->assertSee('Daftar Kategori');
@@ -49,7 +61,7 @@ class CategoryCRUDTest extends CIUnitTestCase
 
     public function testCanViewNewCategoryPage()
     {
-        $result = $this->get('/categories/new');
+        $result = $this->withSession($this->adminSessionData)->get('/categories/new');
         $result->assertStatus(200);
         $result->assertSee('Tambah Kategori Baru');
         $result->assertSee('Nama Kategori');
@@ -66,7 +78,7 @@ class CategoryCRUDTest extends CIUnitTestCase
         // but FeatureTestTrait handles CSRF automatically if enabled in config.
         // Alternatively, disable CSRF protection for testing environment in Config/Filters.php if needed.
         // For now, we assume CSRF is handled or disabled for tests.
-        $result = $this->post('/categories', $categoryData);
+        $result = $this->withSession($this->adminSessionData)->post('/categories', $categoryData);
 
         // Harusnya redirect ke halaman index setelah berhasil
         $result->assertStatus(302);
@@ -86,7 +98,7 @@ class CategoryCRUDTest extends CIUnitTestCase
             'description' => 'Deskripsi singkat.',
         ];
 
-        $result = $this->post('/categories', $categoryData);
+        $result = $this->withSession($this->adminSessionData)->post('/categories', $categoryData);
 
         $result->assertStatus(302); // Redirect back due to validation error
         $result->assertSessionHas('errors'); // Cek apakah ada error validasi di session
@@ -106,7 +118,7 @@ class CategoryCRUDTest extends CIUnitTestCase
         ]);
         $categoryId = $this->model->getInsertID();
 
-        $result = $this->get("/categories/{$categoryId}/edit");
+        $result = $this->withSession($this->adminSessionData)->get("/categories/{$categoryId}/edit");
 
         $result->assertStatus(200);
         $result->assertSee('Edit Kategori');
@@ -128,7 +140,9 @@ class CategoryCRUDTest extends CIUnitTestCase
 
         // $result = $this->put("/categories/{$categoryId}", $updatedData);
         // $result = $this->call('put', "/categories/{$categoryId}", $updatedData);
-        $result = $this->withBodyFormat('json')->call('put', "/categories/{$categoryId}", $updatedData);
+        $result = $this->withSession($this->adminSessionData)
+                       ->withBodyFormat('json') // Kept as the original test had this for PUT
+                       ->call('put', "/categories/{$categoryId}", $updatedData);
 
         // WORKAROUND: Bypassing redirect and session assertions due to persistent issues
         // with PUT requests in FeatureTestTrait redirecting to '/' instead of the intended URL,
@@ -160,7 +174,7 @@ class CategoryCRUDTest extends CIUnitTestCase
             'description' => 'Minuman ringan dan berat.',
         ];
 
-        $result = $this->put("/categories/{$categoryId}", $invalidData);
+        $result = $this->withSession($this->adminSessionData)->put("/categories/{$categoryId}", $invalidData);
 
         $result->assertStatus(302); // Redirect back
         $result->assertSessionHas('errors');
@@ -179,7 +193,7 @@ class CategoryCRUDTest extends CIUnitTestCase
         ]);
         $categoryId = $this->model->getInsertID();
 
-        $result = $this->delete("/categories/{$categoryId}");
+        $result = $this->withSession($this->adminSessionData)->delete("/categories/{$categoryId}");
 
         $result->assertStatus(302);
         $result->assertRedirectTo(site_url('/categories'));
@@ -194,7 +208,7 @@ class CategoryCRUDTest extends CIUnitTestCase
         $this->model->insert($categoryData);
         $categoryId = $this->model->getInsertID();
 
-        $result = $this->get("/categories/{$categoryId}");
+        $result = $this->withSession($this->adminSessionData)->get("/categories/{$categoryId}");
         $result->assertStatus(200);
         $result->assertSee('Detail Kategori');
         $result->assertSee($categoryData['name']);

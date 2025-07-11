@@ -60,6 +60,13 @@ Pengembangan akan dibagi menjadi beberapa tahapan (sprint) untuk memastikan prog
     *   Controller untuk proses login dan logout. (Selesai)
     *   Penggunaan Session CodeIgniter untuk manajemen status login. (Selesai)
     *   Filter untuk melindungi route yang memerlukan autentikasi. (Selesai)
+6.  **Pengujian Fitur Sprint 1:** (Status: Sebagian Selesai)
+    *   Konfigurasi lingkungan pengujian (`phpunit.xml` disalin dan diubah untuk menggunakan SQLite in-memory, `composer.json` diubah untuk menjalankan `./vendor/bin/phpunit`). (Selesai)
+    *   Dependensi pengujian (`php-sqlite3`) diinstal. (Selesai)
+    *   Feature tests yang ada untuk Autentikasi, CRUD Kategori, dan CRUD Produk dijalankan. (Selesai)
+    *   Sebagian besar tes (31/33) berhasil setelah perbaikan pada penanganan sesi di tes CRUD dan metode pengiriman data untuk update produk. (Selesai)
+    *   Tes baru untuk fungsionalitas pencarian produk ditambahkan dan berhasil. (Selesai)
+    *   Dua (2) tes di `AuthenticationTest` (`testLogoutWorks` dan `testProtectedPageRedirectsToLoginAfterLogout`) masih gagal. Investigasi menunjukkan bahwa `TestResponse::getStatus()` mengembalikan `null` untuk panggilan ke rute `/logout`, yang menghalangi asserstion lebih lanjut. Ini diduga masalah dengan test harness/environment untuk skenario spesifik ini. (Sebagian Selesai - Investigasi Terhambat)
 
 ### Sprint 2: Fitur Inti Transaksi (Status: Belum dimulai)
 1.  **Desain Database Transaksi:** (Status: Belum dimulai)
