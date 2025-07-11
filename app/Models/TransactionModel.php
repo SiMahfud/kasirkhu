@@ -20,6 +20,8 @@ class TransactionModel extends Model
         'discount',
         'final_amount',
         'payment_method',
+        'created_at', // Allow manual setting for tests
+        'updated_at', // Allow manual setting for tests
     ];
 
     protected bool $allowEmptyInserts = false;
