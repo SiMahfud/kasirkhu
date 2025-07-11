@@ -21,17 +21,17 @@ Berikut adalah daftar fitur yang direncanakan untuk aplikasi ini.
 - [ ] Pengelolaan Stok untuk ATK
 
 ### Transaksi Penjualan
-- [ ] Input Transaksi Baru
-    - [ ] Pilih Produk/Layanan
-    - [ ] Atur Jumlah/Kuantitas
-    - [ ] Perhitungan Subtotal Otomatis
-    - [ ] Input Diskon (jika ada)
-    - [ ] Perhitungan Total Otomatis
+- [x] Input Transaksi Baru
+    - [x] Pilih Produk/Layanan
+    - [x] Atur Jumlah/Kuantitas
+    - [x] Perhitungan Subtotal Otomatis
+    - [x] Input Diskon (jika ada)
+    - [x] Perhitungan Total Otomatis
 - [ ] Cetak Struk/Nota Transaksi
-- [ ] Riwayat Transaksi
-    - [ ] Lihat Detail Transaksi
+- [x] Riwayat Transaksi
+    - [x] Lihat Detail Transaksi
     - [ ] Filter Riwayat Transaksi (berdasarkan tanggal, pelanggan, dll.)
-- [ ] Pembatalan Transaksi (dengan otorisasi)
+- [x] Pembatalan Transaksi (dengan otorisasi) (Dasar: Soft Delete via UI)
 
 ### Manajemen Pelanggan (Opsional)
 - [ ] Tambah Pelanggan Baru

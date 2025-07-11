@@ -68,22 +68,29 @@ Pengembangan akan dibagi menjadi beberapa tahapan (sprint) untuk memastikan prog
     *   Tes baru untuk fungsionalitas pencarian produk ditambahkan dan berhasil. (Selesai)
     *   Dua (2) tes di `AuthenticationTest` (`testLogoutWorks` dan `testProtectedPageRedirectsToLoginAfterLogout`) masih gagal. Investigasi menunjukkan bahwa `TestResponse::getStatus()` mengembalikan `null` untuk panggilan ke rute `/logout`, yang menghalangi asserstion lebih lanjut. Ini diduga masalah dengan test harness/environment untuk skenario spesifik ini. (Sebagian Selesai - Investigasi Terhambat)
 
-### Sprint 2: Fitur Inti Transaksi (Status: Belum dimulai)
-1.  **Desain Database Transaksi:** (Status: Belum dimulai)
-    *   Tabel `transactions` (id, transaction_code, user_id, customer_name (opsional), total_amount, discount, final_amount, payment_method, created_at).
-    *   Tabel `transaction_details` (id, transaction_id, product_id, quantity, price_per_unit, subtotal).
-    *   Gunakan Migrations.
-2.  **Modul Transaksi Penjualan:** (Status: Belum dimulai)
-    *   Antarmuka (View dengan Bootstrap) untuk input transaksi baru:
-        *   Pemilihan produk/layanan (misalnya, dropdown dengan pencarian atau autocomplete).
-        *   Input jumlah/kuantitas.
-        *   Perhitungan subtotal dan total otomatis (JavaScript dan backend).
-        *   Input diskon.
-    *   Controller untuk memproses dan menyimpan data transaksi ke tabel `transactions` dan `transaction_details`.
-    *   Pengurangan stok produk ATK secara otomatis (jika produk memiliki flag 'is_stock_managed').
-3.  **Riwayat Transaksi Sederhana:** (Status: Belum dimulai)
-    *   Menampilkan daftar transaksi (dengan pagination).
-    *   Menampilkan detail per transaksi (termasuk item-item yang dibeli).
+### Sprint 2: Fitur Inti Transaksi (Status: Selesai)
+1.  **Desain Database Transaksi:** (Status: Selesai)
+    *   Tabel `transactions` (id, transaction_code, user_id, customer_name (opsional), total_amount, discount, final_amount, payment_method, created_at, updated_at, deleted_at). (Selesai - via Migrations)
+    *   Tabel `transaction_details` (id, transaction_id, product_id, quantity, price_per_unit, subtotal, created_at, updated_at). (Selesai - via Migrations)
+    *   Gunakan Migrations. (Selesai)
+2.  **Modul Transaksi Penjualan:** (Status: Selesai)
+    *   Antarmuka (View dengan Bootstrap) untuk input transaksi baru: (Selesai)
+        *   Pemilihan produk/layanan (dropdown). (Selesai)
+        *   Input jumlah/kuantitas. (Selesai)
+        *   Perhitungan subtotal dan total otomatis (JavaScript dan backend). (Selesai)
+        *   Input diskon. (Selesai)
+    *   Controller untuk memproses dan menyimpan data transaksi ke tabel `transactions` dan `transaction_details`. (Selesai)
+    *   Pengurangan stok produk ATK secara otomatis (implementasi dasar berdasarkan ketersediaan field `stock`). (Selesai)
+3.  **Riwayat Transaksi Sederhana:** (Status: Selesai)
+    *   Menampilkan daftar transaksi (dengan pagination). (Selesai)
+    *   Menampilkan detail per transaksi (termasuk item-item yang dibeli). (Selesai)
+4.  **Pengujian Fitur Sprint 2:** (Status: Sebagian Selesai - Dalam Proses Debugging)
+    *   Feature tests untuk `TransactionController` (akses halaman, pembuatan transaksi sukses/gagal, riwayat, detail, hapus) dibuat. (Selesai)
+    *   Saat ini, beberapa tes di `TransactionControllerTest` masih gagal karena isu terkait:
+        *   `FloatCast` CodeIgniter yang tidak fleksibel terhadap input integer dari SQLite.
+        *   Masalah dalam verifikasi session flash messages setelah redirect dalam lingkungan tes.
+        *   Potensi masalah validasi array/nested data pada `testCreateTransactionFailInsufficientStock`.
+    *   Dua (2) tes di `AuthenticationTest` (`testLogoutWorks` dan `testProtectedPageRedirectsToLoginAfterLogout`) masih gagal (isu dari Sprint 1). Investigasi menunjukkan `TestResponse::getStatus()` mengembalikan `null` untuk panggilan ke rute `/logout`.
 
 ### Sprint 3: Penyempurnaan Transaksi dan Laporan Awal (Status: Belum dimulai)
 1.  **Pencetakan Struk/Nota:** (Status: Belum dimulai)
