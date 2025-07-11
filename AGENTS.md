@@ -60,13 +60,13 @@ Pengembangan akan dibagi menjadi beberapa tahapan (sprint) untuk memastikan prog
     *   Controller untuk proses login dan logout. (Selesai)
     *   Penggunaan Session CodeIgniter untuk manajemen status login. (Selesai)
     *   Filter untuk melindungi route yang memerlukan autentikasi. (Selesai)
-6.  **Pengujian Fitur Sprint 1:** (Status: Sebagian Selesai)
+6.  **Pengujian Fitur Sprint 1:** (Status: Selesai)
     *   Konfigurasi lingkungan pengujian (`phpunit.xml` disalin dan diubah untuk menggunakan SQLite in-memory, `composer.json` diubah untuk menjalankan `./vendor/bin/phpunit`). (Selesai)
     *   Dependensi pengujian (`php-sqlite3`) diinstal. (Selesai)
     *   Feature tests yang ada untuk Autentikasi, CRUD Kategori, dan CRUD Produk dijalankan. (Selesai)
     *   Sebagian besar tes (31/33) berhasil setelah perbaikan pada penanganan sesi di tes CRUD dan metode pengiriman data untuk update produk. (Selesai)
     *   Tes baru untuk fungsionalitas pencarian produk ditambahkan dan berhasil. (Selesai)
-    *   Dua (2) tes di `AuthenticationTest` (`testLogoutWorks` dan `testProtectedPageRedirectsToLoginAfterLogout`) masih gagal. Investigasi menunjukkan bahwa `TestResponse::getStatus()` mengembalikan `null` untuk panggilan ke rute `/logout`, yang menghalangi asserstion lebih lanjut. Ini diduga masalah dengan test harness/environment untuk skenario spesifik ini. (Sebagian Selesai - Investigasi Terhambat)
+    *   Dua (2) tes di `AuthenticationTest` (`testLogoutWorks` dan `testProtectedPageRedirectsToLoginAfterLogout`) **telah diperbaiki**. Isu `TestResponse::getStatus()` yang mengembalikan `null` untuk rute `/logout` diatasi dengan melakukan `resetServices(true)` setelah panggilan logout dalam tes untuk memastikan state session yang bersih bagi asserstion berikutnya. Ini mengindikasikan bahwa masalahnya kemungkinan pada bagaimana test harness menangani state session setelah redirect dari logout. (Selesai)
 
 ### Sprint 2: Fitur Inti Transaksi (Status: Selesai)
 1.  **Desain Database Transaksi:** (Status: Selesai)
@@ -84,13 +84,13 @@ Pengembangan akan dibagi menjadi beberapa tahapan (sprint) untuk memastikan prog
 3.  **Riwayat Transaksi Sederhana:** (Status: Selesai)
     *   Menampilkan daftar transaksi (dengan pagination). (Selesai)
     *   Menampilkan detail per transaksi (termasuk item-item yang dibeli). (Selesai)
-4.  **Pengujian Fitur Sprint 2 (dan perbaikan berkelanjutan):** (Status: Sebagian Selesai)
+4.  **Pengujian Fitur Sprint 2 (dan perbaikan berkelanjutan):** (Status: Selesai)
     *   Feature tests untuk `TransactionController` (akses halaman, pembuatan transaksi sukses/gagal, riwayat, detail, hapus) dibuat dan sebagian besar diperbaiki. (Selesai)
     *   Lingkungan pengujian distabilkan dengan `BaseFeatureTestCase` untuk memastikan migrasi berjalan konsisten. `DBPrefix` dikosongkan untuk `tests` group di `app/Config/Database.php` untuk menghindari isu dengan SQLite.
-    *   Dua (2) tes di `AuthenticationTest` (`testLogoutWorks` dan `testProtectedPageRedirectsToLoginAfterLogout`) masih gagal (isu dari Sprint 1, ditunda perbaikannya).
-    *   `ReportFeatureTest` memiliki 2 kegagalan terkait asserstion nilai numerik pada laporan (membutuhkan investigasi lebih lanjut pada kalkulasi laporan atau data uji).
+    *   Dua (2) tes di `AuthenticationTest` (`testLogoutWorks` dan `testProtectedPageRedirectsToLoginAfterLogout`) **telah diperbaiki** (lihat catatan di Sprint 1). (Selesai)
+    *   `ReportFeatureTest` yang sebelumnya memiliki 2 kegagalan terkait asserstion nilai numerik **telah diperbaiki**. Isu utama adalah data transaksi 'kemarin' yang tidak tersimpan dengan tanggal yang benar dalam setup tes, serta asserstion yang terlalu rapuh terhadap struktur HTML. Perbaikan melibatkan update manual `created_at` pada data tes dan penyesuaian pada metode `assertSee`. (Selesai)
 
-### Sprint 3: Penyempurnaan Transaksi dan Laporan Awal (Status: Sebagian Selesai)
+### Sprint 3: Penyempurnaan Transaksi dan Laporan Awal (Status: Selesai)
 1.  **Pencetakan Struk/Nota:** (Status: Selesai)
     *   Desain template struk (`app/Views/transactions/receipt.php`) menggunakan HTML/CSS Bootstrap. (Selesai)
     *   Fungsi di `TransactionController::receipt()` untuk menghasilkan halaman struk yang siap cetak. (Selesai)
@@ -100,18 +100,18 @@ Pengembangan akan dibagi menjadi beberapa tahapan (sprint) untuk memastikan prog
     *   View (`products/stock_report.php`) untuk melihat sisa stok produk. (Selesai)
     *   Fitur sederhana di `ProductController::adjustStock()` untuk penyesuaian/penambahan stok manual (oleh Admin). (Selesai)
     *   Diuji melalui `StockManagementTest.php`. (Selesai)
-3.  **Laporan Penjualan Dasar:** (Status: Sebagian Selesai)
+3.  **Laporan Penjualan Dasar:** (Status: Selesai)
     *   Laporan penjualan harian (total omset, jumlah transaksi) di `ReportController::dailySales()` dan view `reports/daily_sales.php`. (Selesai)
     *   Laporan produk/layanan terlaris di `ReportController::topProducts()` dan view `reports/top_products.php`. (Selesai)
     *   Filter laporan berdasarkan rentang tanggal. (Selesai)
-    *   Diuji melalui `ReportFeatureTest.php`. Tes menunjukkan fungsionalitas dasar ada, namun terdapat kegagalan pada asserstion nilai spesifik yang perlu diinvestigasi lebih lanjut (kemungkinan terkait data/kalkulasi laporan, bukan fitur utama).
-4.  **Perhitungan Spesifik Toko Khumaira (Implementasi Awal):** (Status: Sebagian Selesai)
+    *   Diuji melalui `ReportFeatureTest.php`. **Semua tes terkait laporan penjualan dasar kini berhasil.** Isu utama adalah data transaksi 'kemarin' yang tidak tersimpan dengan tanggal yang benar dalam setup tes, serta asserstion yang terlalu rapuh terhadap struktur HTML. Perbaikan melibatkan update manual `created_at` pada data tes dan penyesuaian pada metode `assertSee`. (Selesai)
+4.  **Perhitungan Spesifik Toko Khumaira (Implementasi Awal):** (Status: Selesai)
     *   `TransactionController::create()` diperbarui untuk menangani:
         *   Jasa fotokopi/print: menggunakan `service_item_price` jika dikirim dari form, dan menyimpan detail seperti jumlah halaman, jenis kertas, warna di `service_item_details`. (Logika di controller ada)
         *   Jasa desain/edit/banner: menggunakan `manual_price` jika dikirim dari form atau jika harga produk dasar adalah 0, menyimpan deskripsi di `service_item_details`. (Logika di controller ada)
     *   Pengurangan stok disesuaikan agar hanya berlaku untuk unit produk yang dikelola stoknya (misalnya 'pcs', 'rim'), bukan untuk unit jasa ('lembar', 'project'). (Logika di controller ada)
     *   Tes baru ditambahkan di `TransactionControllerTest.php` (`testCreateTransactionWithFotokopiServicePrice`, `testCreateTransactionWithManualPriceService`) untuk fitur ini. (Selesai)
-    *   Status tes: Saat ini tes gagal karena data `service_item_price` atau `manual_price` tidak terdeteksi dengan benar oleh controller dari request POST tes. Ini mengindikasikan masalah pada bagaimana data tes dikirim atau diterima, bukan pada logika perhitungan inti di controller jika data tersebut ada. Fitur dianggap "Sebagian Selesai" karena logika inti ada di controller, tetapi interaksinya dalam tes belum berhasil.
+    *   Status tes: **Semua tes terkait perhitungan spesifik kini berhasil.** Isu utama adalah `service_item_details` tidak masuk dalam `allowedFields` di `TransactionDetailModel`, sehingga tidak tersimpan ke database. Setelah ditambahkan, tes berhasil. Juga, helper `form` dan `url` ditambahkan ke `TransactionController` untuk mengatasi error pada tes lain yang muncul setelah perubahan model. (Selesai)
 
 ### Sprint 4: Pengaturan dan Pengguna (Status: Belum dimulai)
 1.  **Modul Pengaturan Toko:** (Status: Belum dimulai)

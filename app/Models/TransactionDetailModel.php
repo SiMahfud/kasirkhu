@@ -18,6 +18,7 @@ class TransactionDetailModel extends Model
         'quantity',
         'price_per_unit',
         'subtotal',
+        'service_item_details', // Added this field
     ];
 
     protected bool $allowEmptyInserts = false;

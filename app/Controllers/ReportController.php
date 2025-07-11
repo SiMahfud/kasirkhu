@@ -52,11 +52,16 @@ class ReportController extends ResourceController // Or BaseController
             'total_transactions' => array_sum(array_column($reportData, 'total_transactions')),
             'total_sales' => array_sum(array_column($reportData, 'total_sales'))
         ];
+        log_message('error', '[ReportController] Date Range: ' . $fromDate->format('Y-m-d') . ' to ' . $toDate->format('Y-m-d H:i:s'));
+        log_message('error', '[ReportController] ReportData: ' . json_encode($reportData));
+        log_message('error', '[ReportController] Summary Sales: ' . $summary['total_sales']);
 
         $data = [
             'title'      => 'Laporan Penjualan Harian',
             'reportData' => $reportData,
             'summary'    => $summary,
+            // 'debug_total_sales' => $summary['total_sales'], // DEBUG REMOVED
+            // 'debug_tx_count' => $summary['total_transactions'], // DEBUG REMOVED
             'fromDate'   => $fromDate->format('Y-m-d'),
             'toDate'     => $request->getGet('to_date') ?? date('Y-m-d'), // Use original toDate for form prefill
             'message'    => session()->getFlashdata('message'),

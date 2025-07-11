@@ -62,32 +62,38 @@ class ReportFeatureTest extends BaseFeatureTestCase
     {
         $cashier = $this->adminUser; // Use admin as cashier for simplicity
 
-        $products = $this->productModel->limit(2)->findAll(); // Use findAll to get array of objects
-        if (count($products) < 2) {
-            $category = $this->categoryModel->first() ?? $this->categoryModel->find($this->categoryModel->insert(['name' => 'Report Cat']));
-            $this->productModel->insert(['name'=>'Prod A Report','category_id'=> $category->id,'price'=>10000,'stock'=>10]);
-            $this->productModel->insert(['name'=>'Prod B Report','category_id'=> $category->id,'price'=>20000,'stock'=>10]);
-            $products = $this->productModel->limit(2)->findAll();
-        }
-        $this->assertCount(2, $products, "Need at least 2 products to create sample transactions.");
+        $p1 = $this->productModel->where('code', 'ATK001')->first(); // Pulpen, 2500
+        $p2 = $this->productModel->where('code', 'ATK002')->first(); // Buku, 3000
 
-        $p1 = $products[0];
-        $p2 = $products[1];
+        $this->assertNotNull($p1, "Product ATK001 not found. Ensure ProductSeeder ran and created it.");
+        $this->assertNotNull($p2, "Product ATK002 not found. Ensure ProductSeeder ran and created it.");
 
-        // Transaction 1 (Today)
-        $t1Data = ['user_id' => $cashier->id, 'total_amount' => ($p1->price * 2), 'final_amount' => ($p1->price * 2), 'created_at' => date('Y-m-d H:i:s')];
+        // Transaction 1 (Today): 2 units of P1 (Pulpen) - Let model set timestamp
+        $t1Data = ['user_id' => $cashier->id, 'total_amount' => ($p1->price * 2), 'final_amount' => ($p1->price * 2)];
         $t1Id = $this->transactionModel->insert($t1Data);
         $this->transactionDetailModel->insert(['transaction_id' => $t1Id, 'product_id' => $p1->id, 'quantity' => 2, 'price_per_unit' => $p1->price, 'subtotal' => $p1->price * 2]);
 
-        // Transaction 2 (Today, different product)
-        $t2Data = ['user_id' => $cashier->id, 'total_amount' => ($p2->price * 1), 'final_amount' => ($p2->price * 1), 'created_at' => date('Y-m-d H:i:s')];
+        // Transaction 2 (Today): 1 unit of P2 (Buku) - Let model set timestamp
+        $t2Data = ['user_id' => $cashier->id, 'total_amount' => ($p2->price * 1), 'final_amount' => ($p2->price * 1)];
         $t2Id = $this->transactionModel->insert($t2Data);
         $this->transactionDetailModel->insert(['transaction_id' => $t2Id, 'product_id' => $p2->id, 'quantity' => 1, 'price_per_unit' => $p2->price, 'subtotal' => $p2->price * 1]);
 
-        // Transaction 3 (Yesterday)
-        $yesterday = date('Y-m-d H:i:s', strtotime('-1 day'));
-        $t3Data = ['user_id' => $cashier->id, 'total_amount' => ($p1->price * 3), 'final_amount' => ($p1->price * 3), 'created_at' => $yesterday];
+        // Transaction 3 (Yesterday): 3 units of P1 (Pulpen)
+        $yesterday_dt_string = date('Y-m-d H:i:s', strtotime('-1 day'));
+        // Insert T3 first, its created_at will be NOW by model
+        $t3Data = ['user_id' => $cashier->id, 'total_amount' => ($p1->price * 3), 'final_amount' => ($p1->price * 3)];
         $t3Id = $this->transactionModel->insert($t3Data);
+        $this->assertIsNumeric($t3Id, "Failed to insert T3. Errors: " . json_encode($this->transactionModel->errors()));
+
+        // Now, explicitly update its created_at to yesterday
+        // Note: This will also update the updated_at field to NOW, which is fine for this test.
+        $updateResult = $this->transactionModel->update($t3Id, ['created_at' => $yesterday_dt_string]);
+        $this->assertTrue($updateResult, "Failed to update T3's created_at. Errors: " . json_encode($this->transactionModel->errors()));
+
+        // Verify it actually updated in the DB immediately
+        $t3_check = $this->transactionModel->find($t3Id);
+        $this->assertEquals($yesterday_dt_string, $t3_check->created_at->format('Y-m-d H:i:s'), "T3 created_at not updated to yesterday correctly.");
+
         $this->transactionDetailModel->insert(['transaction_id' => $t3Id, 'product_id' => $p1->id, 'quantity' => 3, 'price_per_unit' => $p1->price, 'subtotal' => $p1->price * 3]);
     }
 
@@ -102,18 +108,54 @@ class ReportFeatureTest extends BaseFeatureTestCase
             'role'       => $this->adminUser->role,
             'isLoggedIn' => true,
         ];
+
+        // Log actual transactions from DB for today before calling the controller
+        $today_start_db = date('Y-m-d 00:00:00');
+        $today_end_db = date('Y-m-d 23:59:59');
+        $todays_transactions_from_db = $this->transactionModel
+            ->where('created_at >=', $today_start_db)
+            ->where('created_at <=', $today_end_db)
+            ->findAll();
+        // Convert to array for simpler logging if objects are complex
+        // $loggable_transactions = array_map(fn($tr) => $tr->toArray(), $todays_transactions_from_db);
+        // log_message('error', '[TestDefaultDate] Actual DB Transactions for today BEFORE controller call: ' . json_encode($loggable_transactions));
+
+        // This check is now implicitly confirmed if the controller's sum matches.
+        // $actual_sum_from_db_query = 0;
+        // foreach ($todays_transactions_from_db as $tr) {
+        //     $actual_sum_from_db_query += (float)$tr->final_amount;
+        // }
+        // $p1_for_calc = $this->productModel->where('code', 'ATK001')->first();
+        // $p2_for_calc = $this->productModel->where('code', 'ATK002')->first();
+        // $hardcoded_expected_sum_today = ($p1_for_calc->price * 2) + ($p2_for_calc->price * 1);
+        // if (abs($actual_sum_from_db_query - $hardcoded_expected_sum_today) > 0.001) { // Compare floats
+        //     $this->fail("Mismatch: Sum of final_amount from DB for today is {$actual_sum_from_db_query}, but test expected {$hardcoded_expected_sum_today}. DB data: " . json_encode(array_map(fn($tr) => $tr->toArray(), $todays_transactions_from_db)));
+        // }
+
         $result = $this->withSession($sessionData)->get('/reports/sales/daily');
         $result->assertStatus(200);
         $result->assertSee('Laporan Penjualan Harian');
 
-        // Calculate expected total based on actual seeded/created products in createSampleTransactions
-        $seededProducts = $this->productModel->limit(2)->findAll();
-        $this->assertCount(2, $seededProducts, "Need at least 2 seeded products for default daily sales report assertion.");
-        $p1Today = $seededProducts[0];
-        $p2Today = $seededProducts[1];
-        $expectedTotalToday = ($p1Today->price * 2) + ($p2Today->price * 1); // Based on createSampleTransactions logic
-        $result->assertSee(number_format($expectedTotalToday, 0, ',', '.'));
-        $result->assertSee('Total Transaksi: 2'); // For today
+        // Calculate expected total based on known products and quantities from createSampleTransactions
+        $p1 = $this->productModel->where('code', 'ATK001')->first(); // Pulpen, 2500
+        $p2 = $this->productModel->where('code', 'ATK002')->first(); // Buku, 3000
+        $this->assertNotNull($p1);
+        $this->assertNotNull($p2);
+
+        $expectedTotalToday = ($p1->price * 2) + ($p2->price * 1); // 2 Pulpen, 1 Buku
+        // log_message('error', '[TestDefaultDate] Expected Total Today: ' . $expectedTotalToday . ' from P1 price ' . $p1->price . ' and P2 price ' . $p2->price);
+        $result->assertSee(number_format($expectedTotalToday, 0, ',', '.')); // Restore original assertion
+        // $result->assertSee('DEBUG_TOTAL_SALES: ' . $expectedTotalToday);
+
+        // $responseBody = $result->getBody();
+        // $ringkasanPos = strpos($responseBody, 'Ringkasan Periode');
+        // $excerpt = $ringkasanPos !== false ? substr($responseBody, $ringkasanPos, 600) : 'Ringkasan Periode not found in body: ' . $responseBody;
+        // if (strlen($excerpt) > 1000) $excerpt = substr($excerpt, 0, 1000) . '... [TRUNCATED]';
+        // $this->fail("Debug: Check response body for 'Total Transaksi: 2'. Body excerpt around 'Ringkasan Periode': " . $excerpt);
+
+        $result->assertSee('Total Transaksi:');
+        $result->assertSee('<strong class="fs-5">2</strong>');
+        // $result->assertSee('DEBUG_TX_COUNT: 2');
     }
 
     public function testAccessDailySalesReportWithDateFilter()
@@ -133,13 +175,16 @@ class ReportFeatureTest extends BaseFeatureTestCase
         $result->assertStatus(200);
         $result->assertSee('Laporan Penjualan Harian');
 
-        // Calculate expected total based on actual seeded/created products in createSampleTransactions for yesterday
-        $seededProducts = $this->productModel->limit(1)->findAll(); // Assuming p1 is used for yesterday's transaction
-        $this->assertGreaterThanOrEqual(1, count($seededProducts), "Need at least 1 seeded product for yesterday's daily sales report assertion.");
-        $p1Yesterday = $seededProducts[0];
-        $expectedTotalYesterday = ($p1Yesterday->price * 3); // Based on createSampleTransactions logic
+        // Calculate expected total based on known products for yesterday
+        $p1 = $this->productModel->where('code', 'ATK001')->first(); // Pulpen, 2500
+        $this->assertNotNull($p1);
+
+        $expectedTotalYesterday = ($p1->price * 3); // 3 Pulpen yesterday
+        log_message('error', '[TestDateFilter] Expected Total Yesterday: ' . $expectedTotalYesterday . ' from P1 price ' . $p1->price);
         $result->assertSee(number_format($expectedTotalYesterday, 0, ',', '.'));
-        $result->assertSee('Total Transaksi: 1'); // For yesterday
+        $result->assertSee('Total Transaksi:');
+        $result->assertSee('<strong class="fs-5">1</strong>');
+        // $result->assertSee('DEBUG_TX_COUNT: 1');
     }
 
     public function testAccessDailySalesReportInvalidDateRange()

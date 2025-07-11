@@ -12,6 +12,7 @@ use CodeIgniter\RESTful\ResourceController;
 class TransactionController extends ResourceController
 {
     protected $modelName = TransactionModel::class;
+    protected $helpers = ['form', 'url']; // Added form and url helpers
     // protected $format    = 'html'; // We'll return views or redirects, so format might not be strictly needed here.
 
     /**
