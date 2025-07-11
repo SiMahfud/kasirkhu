@@ -5,9 +5,9 @@
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h2><i class="fas fa-file-invoice-dollar"></i> Detail Transaksi #<?= esc($transaction->transaction_code) ?></h2>
         <div>
-            <a href="<?= site_url('transactions/new') ?>" class="btn btn-sm btn-primary"><i class="fas fa-plus"></i> Buat Baru</a>
-            <a href="<?= site_url('transactions') ?>" class="btn btn-sm btn-secondary"><i class="fas fa-list"></i> Riwayat Transaksi</a>
-            <!-- TODO: Add Print Struk Button here later -->
+            <a href="<?= site_url('transactions/' . $transaction->id . '/receipt') ?>" class="btn btn-sm btn-info" target="_blank"><i class="fas fa-print"></i> Cetak Struk</a>
+            <a href="<?= site_url('transactions/new') ?>" class="btn btn-sm btn-primary ms-2"><i class="fas fa-plus"></i> Buat Baru</a>
+            <a href="<?= site_url('transactions') ?>" class="btn btn-sm btn-secondary ms-2"><i class="fas fa-list"></i> Riwayat Transaksi</a>
         </div>
     </div>
 

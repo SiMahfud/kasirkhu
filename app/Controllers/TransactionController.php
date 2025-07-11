@@ -5,6 +5,7 @@ namespace App\Controllers;
 use App\Models\ProductModel;
 use App\Models\TransactionModel;
 use App\Models\TransactionDetailModel;
+use App\Models\SettingModel; // Added SettingModel
 use CodeIgniter\HTTP\ResponseInterface;
 use CodeIgniter\RESTful\ResourceController;
 
@@ -102,14 +103,24 @@ class TransactionController extends ResourceController
             'customer_name' => 'permit_empty|string|max_length[255]',
             'payment_method' => 'permit_empty|string|max_length[50]',
             'discount' => 'permit_empty|decimal|greater_than_equal_to[0]',
-            'products' => 'required', // Removing min_length[1] again to simplify
+            'products' => 'required',
             'products.*.id' => 'required|integer|is_not_unique[products.id]',
             'products.*.quantity' => 'required|integer|greater_than[0]',
+            // Validation for service specific fields (optional, as they might not always be present)
+            'products.*.service_pages' => 'permit_empty|integer|greater_than_equal_to[0]',
+            'products.*.service_paper_type' => 'permit_empty|string|max_length[50]',
+            'products.*.service_color_type' => 'permit_empty|string|max_length[50]',
+            'products.*.service_item_price' => 'permit_empty|decimal|greater_than_equal_to[0]', // Price for fotocopy/print item
+            'products.*.manual_price' => 'permit_empty|decimal|greater_than_equal_to[0]',      // Manual price for design/edit
+            'products.*.service_description' => 'permit_empty|string|max_length[255]',
         ];
 
+        // Note: No specific messages for service fields for now, default messages will apply.
         $messages = [
-            'products.required' => 'At least one product must be added to the transaction.',
-            // 'products.min_length' => 'At least one product item must be added to the transaction.',
+            'products.required' => 'Minimal satu produk harus ditambahkan ke transaksi.',
+            'products.*.id.required' => 'Produk harus dipilih untuk setiap baris.',
+            'products.*.quantity.required' => 'Kuantitas harus diisi untuk setiap produk.',
+            'products.*.quantity.greater_than' => 'Kuantitas harus lebih besar dari 0.',
         ];
 
         if (!$this->validate($rules, $messages)) {
@@ -136,18 +147,53 @@ class TransactionController extends ResourceController
 
                 $product = $productModel->find($p['id']);
                 if (!$product) {
-                    throw new \Exception("Product with ID {$p['id']} not found.");
+                    throw new \Exception("Produk dengan ID {$p['id']} tidak ditemukan.");
                 }
 
-                $subtotal = $product->price * $p['quantity'];
+                $itemPrice = $product->price;
+                $quantity = (int)$p['quantity'];
+                $serviceDetailsArray = [];
+
+                // Check for service-specific pricing logic
+                // Identifier for service type (e.g., from product name, category, or a dedicated field)
+                // This is a simplified check. A more robust solution would use a flag/type on the product.
+                $productNameLower = strtolower($product->name);
+                $productUnitLower = strtolower($product->unit ?? '');
+
+                // Logic for Fotokopi/Print (price per item might be calculated based on pages, etc.)
+                if (isset($p['service_item_price']) && is_numeric($p['service_item_price']) &&
+                    (strpos($productNameLower, 'fotokopi') !== false || strpos($productNameLower, 'print') !== false || $productUnitLower === 'lembar' || $productUnitLower === 'halaman' )) {
+                    $itemPrice = (float)$p['service_item_price'];
+                    $serviceDetailsArray['pages'] = $p['service_pages'] ?? null;
+                    $serviceDetailsArray['paper_type'] = $p['service_paper_type'] ?? null;
+                    $serviceDetailsArray['color_type'] = $p['service_color_type'] ?? null;
+                    // Quantity for such services might be 1 if service_item_price is total for the job,
+                    // or quantity could be number of sets. Current JS logic uses main quantity.
+                }
+                // Logic for Design/Edit (manual price per item)
+                elseif (isset($p['manual_price']) && is_numeric($p['manual_price']) &&
+                         (strpos($productNameLower, 'desain') !== false || strpos($productNameLower, 'design') !== false || strpos($productNameLower, 'edit') !== false || strpos($productNameLower, 'banner') !== false || (float)$product->price == 0)) {
+                    $itemPrice = (float)$p['manual_price'];
+                    $serviceDetailsArray['description'] = $p['service_description'] ?? null;
+                    // Here, quantity is usually 1 for a custom priced job.
+                }
+
+
+                $subtotal = $itemPrice * $quantity;
                 $totalAmount += $subtotal;
 
-                $transactionDetailsData[] = [
-                    'product_id' => $product->id,
-                    'quantity' => $p['quantity'],
-                    'price_per_unit' => $product->price,
-                    'subtotal' => $subtotal,
+                $detail = [
+                    'product_id'     => $product->id,
+                    'quantity'       => $quantity,
+                    'price_per_unit' => $itemPrice, // Use the determined item price
+                    'subtotal'       => $subtotal,
                 ];
+
+                if (!empty($serviceDetailsArray)) {
+                    $detail['service_item_details'] = json_encode($serviceDetailsArray);
+                }
+
+                $transactionDetailsData[] = $detail;
 
                 // Stock reduction as per AGENTS.md
                 // "Pengurangan stok produk ATK secara otomatis (jika produk memiliki flag 'is_stock_managed')."
@@ -259,5 +305,48 @@ class TransactionController extends ResourceController
 
         $errors = $transactionModel->errors() ? implode(', ', $transactionModel->errors()) : 'Unknown error.';
         return redirect()->to('/transactions')->with('error', 'Failed to delete transaction: ' . $errors);
+    }
+
+    public function receipt($id = null)
+    {
+        $transactionModel = new TransactionModel();
+        $transactionDetailModel = new TransactionDetailModel();
+        $settingModel = new SettingModel(); // Instantiated SettingModel
+
+        $transaction = $transactionModel
+            ->select('transactions.*, users.name as cashier_name')
+            ->join('users', 'users.id = transactions.user_id', 'left')
+            ->find($id);
+
+        if (!$transaction) {
+            return redirect()->to('/transactions')->with('error', 'Transaction not found.');
+        }
+
+        $details = $transactionDetailModel
+            ->select('transaction_details.*, products.name as product_name, products.code as product_code')
+            ->join('products', 'products.id = transaction_details.product_id')
+            ->where('transaction_details.transaction_id', $id)
+            ->findAll();
+
+        // Fetch store info from SettingModel
+        $storeName = $settingModel->getSetting('store_name');
+        $storeAddress = $settingModel->getSetting('store_address');
+        $storePhone = $settingModel->getSetting('store_phone');
+        $receiptFooter = $settingModel->getSetting('receipt_footer_message');
+
+        $storeInfo = [
+            'name' => $storeName ?: 'Toko Khumaira (Belum Diatur)',
+            'address' => $storeAddress ?: 'Alamat Toko (Belum Diatur)',
+            'phone' => $storePhone ?: 'Telepon Toko (Belum Diatur)',
+            'receipt_footer' => $receiptFooter ?: 'Terima kasih!'
+        ];
+
+        $data = [
+            'transaction' => $transaction,
+            'details'     => $details,
+            'storeInfo'   => $storeInfo,
+        ];
+
+        return view('transactions/receipt', $data);
     }
 }
