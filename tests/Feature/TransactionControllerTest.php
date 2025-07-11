@@ -2,63 +2,64 @@
 
 namespace Tests\Feature;
 
-use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
-use CodeIgniter\Test\FeatureTestTrait;
 use App\Models\UserModel;
 use App\Models\CategoryModel;
 use App\Models\ProductModel;
 use App\Models\TransactionModel;
 use App\Models\TransactionDetailModel;
-use App\Entities\User;
+use App\Entities\User; // Assuming User entity is used
+use Tests\Support\Database\BaseFeatureTestCase;
 
-class TransactionControllerTest extends CIUnitTestCase
+
+class TransactionControllerTest extends BaseFeatureTestCase
 {
-    use DatabaseTestTrait;
-    use FeatureTestTrait;
+    // Traits, $namespace, $DBGroup, $baseURL, migration handling inherited.
 
-    // Note: $migrate must be true if using DatabaseTestTrait and expecting schema to be set up.
-    // It defaults to true in CIUnitTestCase if DatabaseTestTrait is used.
-    // protected $migrateOnce = true; // Ensure migrations run only once per test class for speed.
-    // protected $refresh = true; // Alternative to $migrate, runs migrations before each test.
-
-    protected $namespace   = 'App'; // Important for locating migrations and seeds
-
-    protected ?User $loggedInUser = null; // Renamed for clarity
+    protected UserModel $userModel; // Added type hint
     protected CategoryModel $categoryModel;
     protected ProductModel $productModel;
     protected TransactionModel $transactionModel;
     protected TransactionDetailModel $transactionDetailModel;
 
+    protected ?User $loggedInUser = null;
+    protected array $loggedInUserSessionData; // To store session data
+
     protected function setUp(): void
     {
-        parent::setUp();
+        parent::setUp(); // Handles migrations
 
-        // Ensure correct environment for testing
-        $_ENV['CI_ENVIRONMENT'] = 'testing';
-        putenv('CI_ENVIRONMENT=testing');
-
-        // Initialize models (DatabaseTestTrait should handle DB connection for 'tests' group)
+        // Initialize models
+        $this->userModel = new UserModel();
         $this->categoryModel = new CategoryModel();
         $this->productModel = new ProductModel();
         $this->transactionModel = new TransactionModel();
         $this->transactionDetailModel = new TransactionDetailModel();
 
-        // Create and login a user
-        $userModel = new UserModel();
-        $this->loggedInUser = new User([
-            'name'     => 'Test Cashier',
-            'username' => 'testcashier' . random_int(1000,9999), // Ensure unique username for reruns
-            'password' => 'password123',
-            'role'     => 'cashier',
-        ]);
-        // The UserModel's beforeInsert callback should hash the password.
-        $userId = $userModel->insert($this->loggedInUser);
-        $this->loggedInUser->id = $userId;
+        // Seed necessary data - AdminUserSeeder should create at least one user
+        $this->seed('AdminUserSeeder'); // Corrected from UserSeeder
+        $this->seed('CategorySeeder'); // Ensure categories exist for products
+        $this->seed('ProductSeeder');  // Ensure products exist
 
-        // $this->actingAs($this->loggedInUser); // Commenting out due to persistent issues
+        // Create and prepare login for a user
+        // Attempt to find an existing user from AdminUserSeeder
+        $this->loggedInUser = $this->userModel->where('role', 'cashier')->orWhere('role', 'admin')->first();
 
-        // Ensure session data is prepared
+        if (!$this->loggedInUser) {
+             // If no suitable user from seeder, create one
+            $username = 'testcashier' . random_int(1000, 9999);
+            $userData = [
+                'name'     => 'Test Cashier Transaction',
+                'username' => $username,
+                'password' => 'password123', // Will be hashed by UserModel
+                'role'     => 'cashier',
+            ];
+            $userId = $this->userModel->insert($userData);
+            $this->assertTrue($userId !== false, "Failed to create user for transaction test. Errors: " . implode(', ', $this->userModel->errors()));
+            $this->loggedInUser = $this->userModel->find($userId);
+        }
+        $this->assertNotNull($this->loggedInUser, "loggedInUser is null, user setup failed.");
+
+
         $this->loggedInUserSessionData = [
             'user_id'    => $this->loggedInUser->id,
             'username'   => $this->loggedInUser->username,
@@ -67,54 +68,48 @@ class TransactionControllerTest extends CIUnitTestCase
             'isLoggedIn' => true,
         ];
 
-        // Seed necessary data
-        $this->seedTestData();
+        // Seed specific test data for transactions if ProductSeeder isn't sufficient
+        // $this->seedTestData(); // This was in original, let's ensure products are there.
+        // If ProductSeeder is comprehensive, this might not be needed or can be simplified.
+        $this->ensureTestProductsExist();
     }
 
     protected function tearDown(): void
     {
         parent::tearDown();
-        // DatabaseTestTrait handles cleaning up the database if $refresh = true or $migrate = true (default)
     }
 
-    protected function seedTestData()
+    protected function ensureTestProductsExist()
     {
-        // Ensure category table is clean or use specific names
-        $this->categoryModel->purgeDeleted(); // Clean up soft deleted if any
-        $this->categoryModel->where('name', 'ATK Test Category')->delete();
-
-        $categoryData = ['name' => 'ATK Test Category', 'description' => 'Test category for ATK products'];
-        $categoryId = $this->categoryModel->insert($categoryData);
-        $this->assertTrue($categoryId !== false && $categoryId > 0, "Failed to seed category. Errors: " . implode(', ', $this->categoryModel->errors()));
-
-
-        // Clean up previous test products if necessary, or use unique codes
-        $this->productModel->where('code', 'PENTEST01')->delete();
-        $this->productModel->where('code', 'BOOKTEST02')->delete();
-        $this->productModel->where('code', 'SRVTEST03')->delete();
-        $this->productModel->purgeDeleted();
-
-
-        $productsToSeed = [
-            [
-                'category_id' => $categoryId, 'code' => 'PENTEST01', 'name' => 'Pena Uji Coba',
-                'price' => 5000, 'unit' => 'pcs', 'stock' => 100, 'description' => 'Pena untuk menulis data uji.',
-            ],
-            [
-                'category_id' => $categoryId, 'code' => 'BOOKTEST02', 'name' => 'Buku Catatan Uji',
-                'price' => 15000, 'unit' => 'pcs', 'stock' => 50, 'description' => 'Buku untuk mencatat hasil uji.',
-            ],
-            [
-                'category_id' => $categoryId, 'code' => 'SRVTEST03', 'name' => 'Jasa Fotokopi Uji',
-                'price' => 500, 'unit' => 'lembar', 'stock' => 0, 'description' => 'Jasa fotokopi. (Stock set to 0 for test)',
-            ],
+        $productsToEnsure = [
+            ['code' => 'PENTEST01', 'name' => 'Pena Uji Coba Trans', 'price' => 5000, 'stock' => 100],
+            ['code' => 'BOOKTEST02', 'name' => 'Buku Catatan Uji Trans', 'price' => 15000, 'stock' => 50],
+            ['code' => 'SRVTEST03', 'name' => 'Jasa Fotokopi Uji Trans', 'price' => 500, 'stock' => 0, 'unit' => 'lembar'], // Set to 0 to avoid model insert issue with null
         ];
 
-        foreach($productsToSeed as $productData) {
-            $inserted = $this->productModel->insert($productData);
-            $this->assertTrue($inserted !== false, "Failed to seed product {$productData['code']}. Errors: " . implode(', ', $this->productModel->errors()));
+        $defaultCategory = $this->categoryModel->first();
+        if (!$defaultCategory) {
+            $catId = $this->categoryModel->insert(['name' => 'Default Trans Test Category']);
+            $defaultCategory = $this->categoryModel->find($catId);
+        }
+        $this->assertNotNull($defaultCategory, "Default category for test products could not be established.");
+
+        foreach ($productsToEnsure as $pData) {
+            $product = $this->productModel->where('code', $pData['code'])->first();
+            if (!$product) {
+                $this->productModel->insert([
+                    'category_id' => $defaultCategory->id,
+                    'code'        => $pData['code'],
+                    'name'        => $pData['name'],
+                    'price'       => $pData['price'],
+                    'unit'        => $pData['unit'] ?? 'pcs',
+                    'stock'       => $pData['stock'],
+                    'description' => $pData['name'] . ' description.',
+                ]);
+            }
         }
     }
+
 
     public function testCanAccessNewTransactionPage()
     {
@@ -278,5 +273,109 @@ class TransactionControllerTest extends CIUnitTestCase
 
         $this->assertNull($this->transactionModel->find($transactionId)); // Should not be found by normal find
         $this->assertNotNull($this->transactionModel->onlyDeleted()->find($transactionId)); // Should be found with onlyDeleted
+    }
+
+    // --- New Tests for Sprint 3 Khumaira Specific Calculations ---
+
+    public function testCreateTransactionWithFotokopiServicePrice()
+    {
+        // Ensure 'Jasa Fotokopi Uji Trans' (SRVTEST03) exists from ensureTestProductsExist()
+        $fotokopiProduct = $this->productModel->where('code', 'SRVTEST03')->first();
+        $this->assertNotNull($fotokopiProduct, "Fotokopi service product (SRVTEST03) not found.");
+
+        $serviceItemPrice = 750.00; // Calculated price from frontend (e.g., 5 pages * 150/page)
+        $pages = 5;
+        $paperType = 'A4 70gr';
+        $colorType = 'Hitam Putih';
+
+        $data = [
+            'customer_name' => 'Pelanggan Fotokopi Uji',
+            'products' => [
+                [
+                    'id' => $fotokopiProduct->id,
+                    'quantity' => 1, // Typically quantity 1 for a "job" priced this way
+                    'service_item_price' => $serviceItemPrice,
+                    'service_pages' => $pages,
+                    'service_paper_type' => $paperType,
+                    'service_color_type' => $colorType,
+                ]
+            ],
+        ];
+
+        $result = $this->withSession($this->loggedInUserSessionData)
+                         ->post('/transactions/create', $data);
+
+        $result->assertRedirect();
+        $this->assertTrue(str_contains(session('message') ?? '', 'Transaction created successfully!'), "Session message for successful fotokopi transaction not found or incorrect. Errors: " . json_encode(session('error')));
+
+        $transaction = $this->transactionModel->where('customer_name', 'Pelanggan Fotokopi Uji')->orderBy('id', 'DESC')->first();
+        $this->assertNotNull($transaction, 'Fotokopi Transaction was not created.');
+        $this->assertEquals($serviceItemPrice, $transaction->final_amount);
+
+        $detail = $this->transactionDetailModel->where('transaction_id', $transaction->id)->first();
+        $this->assertNotNull($detail, 'Transaction detail for fotokopi service not found.');
+        $this->assertEquals($fotokopiProduct->id, $detail->product_id);
+        $this->assertEquals(1, $detail->quantity);
+        $this->assertEquals($serviceItemPrice, $detail->price_per_unit); // Price per unit should be the service_item_price
+        $this->assertEquals($serviceItemPrice, $detail->subtotal);
+
+        $this->assertNotNull($detail->service_item_details, "service_item_details should not be null for fotokopi service.");
+        $serviceDetailsArray = json_decode($detail->service_item_details, true);
+        $this->assertEquals($pages, $serviceDetailsArray['pages']);
+        $this->assertEquals($paperType, $serviceDetailsArray['paper_type']);
+        $this->assertEquals($colorType, $serviceDetailsArray['color_type']);
+    }
+
+    public function testCreateTransactionWithManualPriceService()
+    {
+        // Create a dummy "Jasa Desain" product if not already seeded with price 0
+        $desainProductName = 'Jasa Desain Uji Trans';
+        $desainProduct = $this->productModel->where('name', $desainProductName)->first();
+        if (!$desainProduct) {
+            $defaultCategory = $this->categoryModel->first();
+            $desainProductId = $this->productModel->insert([
+                'category_id' => $defaultCategory->id, 'code' => 'DESIGN01', 'name' => $desainProductName,
+                'price' => 0, 'unit' => 'project', 'stock' => 0, // Use 0 for stock for services if not tracked
+            ]);
+            $desainProduct = $this->productModel->find($desainProductId);
+        }
+        $this->assertNotNull($desainProduct, "Desain service product not found/created.");
+        $this->assertEquals(0, (float)$desainProduct->price, "Desain product base price should be 0 for this test.");
+
+        $manualPrice = 75000.00;
+        $serviceDescription = 'Desain logo perusahaan X';
+
+        $data = [
+            'customer_name' => 'Pelanggan Desain Uji',
+            'products' => [
+                [
+                    'id' => $desainProduct->id,
+                    'quantity' => 1,
+                    'manual_price' => $manualPrice,
+                    'service_description' => $serviceDescription,
+                ]
+            ],
+        ];
+
+        $result = $this->withSession($this->loggedInUserSessionData)
+                         ->post('/transactions/create', $data);
+
+        $result->assertRedirect();
+        $this->assertTrue(str_contains(session('message') ?? '', 'Transaction created successfully!'), "Session message for successful desain transaction not found or incorrect. Errors: " . json_encode(session('error')));
+
+        $transaction = $this->transactionModel->where('customer_name', 'Pelanggan Desain Uji')->orderBy('id', 'DESC')->first();
+        $this->assertNotNull($transaction, 'Desain Transaction was not created.');
+        $this->assertEquals($manualPrice, $transaction->final_amount);
+
+        $detail = $this->transactionDetailModel->where('transaction_id', $transaction->id)->first();
+        $this->assertNotNull($detail, 'Transaction detail for desain service not found.');
+        $this->assertEquals($desainProduct->id, $detail->product_id);
+        $this->assertEquals(1, $detail->quantity);
+        $this->assertEquals($manualPrice, $detail->price_per_unit);
+        $this->assertEquals($manualPrice, $detail->subtotal);
+
+        $this->assertNotNull($detail->service_item_details, "service_item_details should not be null for desain service.");
+        $serviceDetailsArray = json_decode($detail->service_item_details, true);
+        $this->assertEquals($serviceDescription, $serviceDetailsArray['description']);
     }
 }

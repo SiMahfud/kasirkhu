@@ -2,36 +2,48 @@
 
 namespace Tests\Feature;
 
-use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
-use CodeIgniter\Test\FeatureTestTrait;
+// use CodeIgniter\Test\CIUnitTestCase; // Replaced by BaseFeatureTestCase
+// use CodeIgniter\Test\DatabaseTestTrait; // Included in BaseFeatureTestCase
+// use CodeIgniter\Test\FeatureTestTrait; // Included in BaseFeatureTestCase
 use App\Models\CategoryModel;
+use Tests\Support\Database\BaseFeatureTestCase; // Import the new base class
 
-class CategoryCRUDTest extends CIUnitTestCase
+class CategoryCRUDTest extends BaseFeatureTestCase // Extend the new base class
 {
-    use DatabaseTestTrait; // Handles database setup, migrations, and cleanup
-    use FeatureTestTrait;  // Allows us to make HTTP requests
+    // DatabaseTestTrait and FeatureTestTrait are now inherited.
+    // Properties like $refresh, $namespace, $DBGroup are set in BaseFeatureTestCase.
+    // protected $refreshDatabase = true; // This is equivalent to $refresh = true in DatabaseTestTrait
 
-    // Set true if you want to refresh the database and run migrations before each test.
-    // AGENTS.md merekomendasikan ini, jadi kita set true.
-    protected $refreshDatabase = true;
     // Specify the base URL if your tests need it (e.g., for redirects)
-    protected $baseURL = 'http://localhost:8080/'; // Sesuaikan dengan app.baseURL Anda
-    protected $namespace = 'App'; // Tentukan namespace migrasi yang akan dijalankan
+    // This can also be set in phpunit.xml or BaseFeatureTestCase if common.
+    protected $baseURL = 'http://localhost:8080/';
 
-    protected $model;
+    protected CategoryModel $model; // Type hint for clarity
     protected array $adminSessionData;
 
     protected function setUp(): void
     {
-        parent::setUp();
+        parent::setUp(); // This now calls BaseFeatureTestCase::setUp()
+
+        // BaseFeatureTestCase::setUp() should handle migrations.
+        // Now, just set up things specific to CategoryCRUDTest.
+
+        // Seeders should be called here if not handled by $this->seed in BaseFeatureTestCase
+        // or if specific seed order/data is needed for this test class.
+        $this->seed('AdminUserSeeder');
+        // Add other necessary seeders if DatabaseSeeder is not used globally via $this->seed property
+        // $this->seed('CategorySeeder'); // Example if needed
+
         $this->model = new CategoryModel();
 
-        // Seed admin user for authentication
-        $this->seed('AdminUserSeeder');
-        $adminUser = db_connect()->table('users')->where('username', 'admin')->get()->getRow();
+        $adminUser = $this->db->table('users')->where('username', 'admin')->get()->getRow(); // Corrected from first()
         if (!$adminUser) {
-            $this->fail('Admin user "admin" not found after seeding. Check AdminUserSeeder.');
+            // Attempt to seed again or fail if critical
+            // $this->seed('AdminUserSeeder');
+            // $adminUser = $this->db->table('users')->where('username', 'admin')->get()->getRow();
+            // if (!$adminUser) {
+                 $this->fail('Admin user "admin" not found after seeding. Check AdminUserSeeder and ensure migrations ran.');
+            // }
         }
 
         $this->adminSessionData = [

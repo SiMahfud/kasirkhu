@@ -18,7 +18,7 @@ Berikut adalah daftar fitur yang direncanakan untuk aplikasi ini.
 - [x] Lihat Daftar Produk/Layanan
 - [x] Kategori Produk/Layanan (e.g., Jasa Fotokopi, Jasa Print, ATK)
 - [x] Pencarian Produk/Layanan
-- [ ] Pengelolaan Stok untuk ATK
+- [x] Pengelolaan Stok untuk ATK (Lihat sisa stok, penyesuaian manual)
 
 ### Transaksi Penjualan
 - [x] Input Transaksi Baru
@@ -27,7 +27,7 @@ Berikut adalah daftar fitur yang direncanakan untuk aplikasi ini.
     - [x] Perhitungan Subtotal Otomatis
     - [x] Input Diskon (jika ada)
     - [x] Perhitungan Total Otomatis
-- [ ] Cetak Struk/Nota Transaksi
+- [x] Cetak Struk/Nota Transaksi
 - [x] Riwayat Transaksi
     - [x] Lihat Detail Transaksi
     - [ ] Filter Riwayat Transaksi (berdasarkan tanggal, pelanggan, dll.)
@@ -40,11 +40,11 @@ Berikut adalah daftar fitur yang direncanakan untuk aplikasi ini.
 - [ ] Riwayat Transaksi per Pelanggan
 
 ### Laporan
-- [ ] Laporan Penjualan Harian
+- [/] Laporan Penjualan Harian (Fungsional, tes nilai spesifik perlu dicek)
 - [ ] Laporan Penjualan Mingguan
 - [ ] Laporan Penjualan Bulanan
-- [ ] Laporan Produk/Layanan Terlaris
-- [ ] Laporan Stok ATK (jika ada fitur pengelolaan stok)
+- [/] Laporan Produk/Layanan Terlaris (Fungsional, tes nilai spesifik perlu dicek)
+- [x] Laporan Stok ATK (Lihat sisa stok - bagian dari Pengelolaan Stok)
 
 ### Pengaturan
 - [ ] Pengaturan Informasi Toko (Nama, Alamat, Kontak)
@@ -53,11 +53,11 @@ Berikut adalah daftar fitur yang direncanakan untuk aplikasi ini.
 - [ ] Pengaturan Printer untuk Struk
 
 ### Fitur Tambahan Spesifik Toko Khumaira
-- [ ] Perhitungan Biaya Fotokopi berdasarkan Jumlah Halaman dan Jenis Kertas
-- [ ] Perhitungan Biaya Print berdasarkan Jumlah Halaman, Warna/Hitam Putih, dan Jenis Kertas
-- [ ] Input Jasa Desain dengan Harga Fleksibel
-- [ ] Input Jasa Edit Dokumen dengan Harga Fleksibel
-- [ ] Perhitungan Biaya Cetak Banner berdasarkan Ukuran dan Bahan
+- [/] Perhitungan Biaya Fotokopi berdasarkan Jumlah Halaman dan Jenis Kertas (Logika Controller ada, tes input data bermasalah)
+- [/] Perhitungan Biaya Print berdasarkan Jumlah Halaman, Warna/Hitam Putih, dan Jenis Kertas (Logika Controller ada, tes input data bermasalah)
+- [/] Input Jasa Desain dengan Harga Fleksibel (Logika Controller ada, tes input data bermasalah)
+- [/] Input Jasa Edit Dokumen dengan Harga Fleksibel (Logika Controller ada, tes input data bermasalah)
+- [/] Perhitungan Biaya Cetak Banner berdasarkan Ukuran dan Bahan (Logika Controller ada, tes input data bermasalah)
 
 ## Teknologi yang Digunakan
 - Framework: CodeIgniter

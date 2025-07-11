@@ -2,110 +2,105 @@
 
 namespace Tests\Feature;
 
-use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
-use CodeIgniter\Test\FeatureTestTrait;
 use App\Models\UserModel;
 use App\Models\ProductModel;
 use App\Models\CategoryModel;
+use Tests\Support\Database\BaseFeatureTestCase;
 
-class StockManagementTest extends CIUnitTestCase
+class StockManagementTest extends BaseFeatureTestCase
 {
-    use DatabaseTestTrait;
-    use FeatureTestTrait;
+    // Traits, $namespace, $DBGroup, $baseURL, migration handling inherited.
 
-    protected $migrate     = true;
-    protected $migrateOnce = false;
-    protected $seedOnce = false; // Seed for each test method for isolation
-    // No global $seed property, call $this->seed() in setUp or specific tests
+    protected UserModel $userModel;
+    protected ProductModel $productModel;
+    protected CategoryModel $categoryModel;
 
-    protected $user;
-    protected $product;
+    protected $loggedInUser; // Changed from $user
+    protected $testProduct;  // Changed from $product
 
     protected function setUp(): void
     {
-        parent::setUp();
+        parent::setUp(); // Handles migrations
 
-        // Ensure tables are clean before seeding
-        $this->db->table('categories')->truncate();
-        $this->db->table('products')->truncate();
-        $this->db->table('users')->truncate();
-        // Add other tables if they are affected or need cleaning
+        // Initialize models
+        $this->userModel = new UserModel();
+        $this->productModel = new ProductModel();
+        $this->categoryModel = new CategoryModel();
 
-        $this->seed('UserSeeder'); // Creates an admin user typically
+        // Seed necessary data
+        $this->seed('AdminUserSeeder'); // Corrected from UserSeeder
         $this->seed('CategorySeeder');
-        $this->seed('ProductSeeder'); // Creates some products
+        $this->seed('ProductSeeder');
 
-        $userModel = new UserModel();
-        $this->user = $userModel->where('role', 'admin')->first(); // Assuming admin can manage stock
-        if (!$this->user) {
-             $this->user = $userModel->first(); // Fallback if no admin role defined in seeder
+        $this->loggedInUser = $this->userModel->where('role', 'admin')->get()->getRow();
+        if (!$this->loggedInUser) {
+             $this->loggedInUser = $this->userModel->first();
         }
-        if (!$this->user) {
-             // If still no user, create one for the test
-            $userModel->insert([
+        if (!$this->loggedInUser) {
+            $userId = $this->userModel->insert([
                 'name' => 'Stock Test Admin',
-                'username' => 'stockadmin',
+                'username' => 'stockadmin'  . random_int(1000,9999),
                 'password' => password_hash('password123', PASSWORD_DEFAULT),
                 'role' => 'admin'
             ]);
-            $this->user = $userModel->where('username', 'stockadmin')->first();
+            $this->loggedInUser = $this->userModel->find($userId);
         }
+        $this->assertNotNull($this->loggedInUser, "Failed to get/create an admin user for stock tests.");
 
-        $productModel = new ProductModel();
-        $this->product = $productModel->where('stock IS NOT NULL')->first(); // Get a product that has stock management
 
-        if (!$this->product) {
-            // Fallback: Create a product specifically for stock testing if ProductSeeder doesn't provide one
-            $categoryModel = new CategoryModel();
-            $cat = $categoryModel->first();
-            if (!$cat) {
-                $catId = $categoryModel->insert(['name' => 'Stock Test Category']);
-                $cat = $categoryModel->find($catId);
-            }
-
-            $productData = [
-                'name' => 'Stock Test Product',
-                'code' => 'STCK001',
-                'category_id' => $cat->id,
-                'price' => 5000,
-                'unit' => 'pcs',
-                'stock' => 20, // Initial stock
-            ];
-            $productId = $productModel->insert($productData);
-            $this->product = $productModel->find($productId);
+        $this->testProduct = $this->productModel->where('stock IS NOT NULL')->orderBy('id', 'RANDOM')->get()->getRow();
+        if (!$this->testProduct) {
+            $category = $this->categoryModel->first() ?? $this->categoryModel->find($this->categoryModel->insert(['name' => 'Stock Test Category']));
+            $productId = $this->productModel->insert([
+                'name' => 'Stock Test Product', 'code' => 'STCK001',
+                'category_id' => $category->id, 'price' => 5000,
+                'unit' => 'pcs', 'stock' => 20,
+            ]);
+            $this->testProduct = $this->productModel->find($productId);
         }
+        $this->assertNotNull($this->testProduct, "Failed to get/create a product for stock tests.");
     }
 
     public function testAdminCanViewStockReport()
     {
-        if (!$this->user) {
+        if (!$this->loggedInUser) {
             $this->markTestSkipped('Admin user not available for testing stock report.');
         }
-
-        $result = $this->actingAs($this->user)
-                       ->get('/products/stock');
+        $sessionData = [
+            'user_id'    => $this->loggedInUser->id,
+            'username'   => $this->loggedInUser->username,
+            'name'       => $this->loggedInUser->name,
+            'role'       => $this->loggedInUser->role,
+            'isLoggedIn' => true,
+        ];
+        $result = $this->withSession($sessionData)->get('/products/stock');
 
         $result->assertStatus(200);
         $result->assertSee('Laporan Stok Produk');
-        if ($this->product) {
-            $result->assertSee(esc($this->product->name));
+        if ($this->testProduct) {
+            $result->assertSee(esc($this->testProduct->name));
             $result->assertSee('Sesuaikan'); // Button text for adjustment modal
         }
     }
 
     public function testAdjustStockAddQuantity()
     {
-        if (!$this->user || !$this->product) {
+        if (!$this->loggedInUser || !$this->testProduct) {
             $this->markTestSkipped('Admin user or product not available for stock adjustment test.');
         }
 
-        $initialStock = (int)$this->product->stock;
+        $initialStock = (int)$this->testProduct->stock;
         $quantityToAdd = 5;
         $expectedStock = $initialStock + $quantityToAdd;
-
-        $result = $this->actingAs($this->user)
-                       ->post('/products/adjust-stock/' . $this->product->id, [
+        $sessionData = [
+            'user_id'    => $this->loggedInUser->id,
+            'username'   => $this->loggedInUser->username,
+            'name'       => $this->loggedInUser->name,
+            'role'       => $this->loggedInUser->role,
+            'isLoggedIn' => true,
+        ];
+        $result = $this->withSession($sessionData)
+                       ->post('/products/adjust-stock/' . $this->testProduct->id, [
                            'adjustment_type' => 'add',
                            'quantity'        => $quantityToAdd,
                            'notes'           => 'Test add stock'
@@ -117,22 +112,28 @@ class StockManagementTest extends CIUnitTestCase
 
         // Verify stock in database
         $productModel = new ProductModel();
-        $updatedProduct = $productModel->find($this->product->id);
+        $updatedProduct = $productModel->find($this->testProduct->id);
         $this->assertEquals($expectedStock, $updatedProduct->stock);
     }
 
     public function testAdjustStockSubtractQuantity()
     {
-        if (!$this->user || !$this->product || $this->product->stock < 5) {
+        if (!$this->loggedInUser || !$this->testProduct || $this->testProduct->stock < 5) {
             $this->markTestSkipped('Admin user or product with sufficient stock not available for stock subtraction test.');
         }
 
-        $initialStock = (int)$this->product->stock;
+        $initialStock = (int)$this->testProduct->stock;
         $quantityToSubtract = 3;
         $expectedStock = $initialStock - $quantityToSubtract;
-
-        $result = $this->actingAs($this->user)
-                       ->post('/products/adjust-stock/' . $this->product->id, [
+        $sessionData = [
+            'user_id'    => $this->loggedInUser->id,
+            'username'   => $this->loggedInUser->username,
+            'name'       => $this->loggedInUser->name,
+            'role'       => $this->loggedInUser->role,
+            'isLoggedIn' => true,
+        ];
+        $result = $this->withSession($sessionData)
+                       ->post('/products/adjust-stock/' . $this->testProduct->id, [
                            'adjustment_type' => 'subtract',
                            'quantity'        => $quantityToSubtract,
                            'notes'           => 'Test subtract stock'
@@ -143,20 +144,26 @@ class StockManagementTest extends CIUnitTestCase
         $result->assertSessionHas('message');
 
         $productModel = new ProductModel();
-        $updatedProduct = $productModel->find($this->product->id);
+        $updatedProduct = $productModel->find($this->testProduct->id);
         $this->assertEquals($expectedStock, $updatedProduct->stock);
     }
 
     public function testAdjustStockSetQuantity()
     {
-        if (!$this->user || !$this->product) {
+        if (!$this->loggedInUser || !$this->testProduct) {
             $this->markTestSkipped('Admin user or product not available for stock set test.');
         }
 
         $newStockQuantity = 15;
-
-        $result = $this->actingAs($this->user)
-                       ->post('/products/adjust-stock/' . $this->product->id, [
+        $sessionData = [
+            'user_id'    => $this->loggedInUser->id,
+            'username'   => $this->loggedInUser->username,
+            'name'       => $this->loggedInUser->name,
+            'role'       => $this->loggedInUser->role,
+            'isLoggedIn' => true,
+        ];
+        $result = $this->withSession($sessionData)
+                       ->post('/products/adjust-stock/' . $this->testProduct->id, [
                            'adjustment_type' => 'set',
                            'quantity'        => $newStockQuantity,
                            'notes'           => 'Test set stock'
@@ -167,21 +174,27 @@ class StockManagementTest extends CIUnitTestCase
         $result->assertSessionHas('message');
 
         $productModel = new ProductModel();
-        $updatedProduct = $productModel->find($this->product->id);
+        $updatedProduct = $productModel->find($this->testProduct->id);
         $this->assertEquals($newStockQuantity, $updatedProduct->stock);
     }
 
     public function testAdjustStockCannotBeNegative()
     {
-        if (!$this->user || !$this->product) {
+        if (!$this->loggedInUser || !$this->testProduct) {
             $this->markTestSkipped('Admin user or product not available for negative stock test.');
         }
 
-        $initialStock = (int)$this->product->stock;
+        $initialStock = (int)$this->testProduct->stock;
         $quantityToSubtract = $initialStock + 5; // Attempt to make stock negative
-
-        $result = $this->actingAs($this->user)
-                       ->post('/products/adjust-stock/' . $this->product->id, [
+        $sessionData = [
+            'user_id'    => $this->loggedInUser->id,
+            'username'   => $this->loggedInUser->username,
+            'name'       => $this->loggedInUser->name,
+            'role'       => $this->loggedInUser->role,
+            'isLoggedIn' => true,
+        ];
+        $result = $this->withSession($sessionData)
+                       ->post('/products/adjust-stock/' . $this->testProduct->id, [
                            'adjustment_type' => 'subtract',
                            'quantity'        => $quantityToSubtract
                        ]);
@@ -194,18 +207,24 @@ class StockManagementTest extends CIUnitTestCase
 
         // Stock should remain unchanged
         $productModel = new ProductModel();
-        $updatedProduct = $productModel->find($this->product->id);
+        $updatedProduct = $productModel->find($this->testProduct->id);
         $this->assertEquals($initialStock, $updatedProduct->stock);
     }
 
     public function testAdjustStockValidationFail()
     {
-        if (!$this->user || !$this->product) {
+        if (!$this->loggedInUser || !$this->testProduct) {
             $this->markTestSkipped('Admin user or product not available for validation failure test.');
         }
-
-        $result = $this->actingAs($this->user)
-                       ->post('/products/adjust-stock/' . $this->product->id, [
+        $sessionData = [
+            'user_id'    => $this->loggedInUser->id,
+            'username'   => $this->loggedInUser->username,
+            'name'       => $this->loggedInUser->name,
+            'role'       => $this->loggedInUser->role,
+            'isLoggedIn' => true,
+        ];
+        $result = $this->withSession($sessionData)
+                       ->post('/products/adjust-stock/' . $this->testProduct->id, [
                            'adjustment_type' => 'invalid_type', // Invalid type
                            'quantity'        => 'abc' // Invalid quantity
                        ]);

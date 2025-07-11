@@ -69,6 +69,6 @@ class ProductSeeder extends Seeder
                  log_message('info', "Product '{$product['name']}' (Code: {$product['code']}) already exists, skipping insertion.");
             }
         }
-        echo "ProductSeeder run successfully.\n";
+        // echo "ProductSeeder run successfully.\n";
     }
 }

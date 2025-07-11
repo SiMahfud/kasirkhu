@@ -2,117 +2,135 @@
 
 namespace Tests\Feature;
 
-use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
-use CodeIgniter\Test\FeatureTestTrait;
 use App\Models\UserModel;
 use App\Models\ProductModel;
 use App\Models\CategoryModel;
 use App\Models\TransactionModel;
 use App\Models\TransactionDetailModel;
-use App\Models\SettingModel; // Added SettingModel
+use App\Models\SettingModel;
+use Tests\Support\Database\BaseFeatureTestCase;
 
-class ReceiptTest extends CIUnitTestCase
+class ReceiptTest extends BaseFeatureTestCase
 {
-    use DatabaseTestTrait;
-    use FeatureTestTrait;
+    // Traits, $namespace, $DBGroup, $baseURL, and migration handling inherited from BaseFeatureTestCase.
+    // protected $seed = 'DatabaseSeeder'; // Can be set if DatabaseSeeder is desired for all tests.
 
-    protected $migrate     = true;
-    protected $migrateOnce = false; // Ensure migrations run for each test for isolation
-    protected $seed        = 'DatabaseSeeder'; // Assuming you have a seeder that sets up necessary data
-    protected $basePath    = APPPATH . 'Database'; // Correct path for seeds if not default
+    protected UserModel $userModel;
+    protected ProductModel $productModel;
+    protected CategoryModel $categoryModel;
+    protected TransactionModel $transactionModel;
+    protected TransactionDetailModel $transactionDetailModel;
+    protected SettingModel $settingModel;
 
-    protected $user;
-    protected $transaction;
+    protected $loggedInUser; // Changed from $user to avoid confusion with UserModel instance
+    protected $testTransaction; // Changed from $transaction
 
     protected function setUp(): void
     {
-        parent::setUp();
+        parent::setUp(); // Handles migrations via BaseFeatureTestCase
 
-        // Manually seed necessary data or use specific seeders if DatabaseSeeder is too broad or slow
-        $this->db->table('categories')->truncate();
-        $this->db->table('products')->truncate();
-        $this->db->table('users')->truncate();
-        $this->db->table('transactions')->truncate();
-        $this->db->table('transaction_details')->truncate();
-        $this->db->table('settings')->truncate(); // Truncate settings
+        // Initialize models
+        $this->userModel = new UserModel();
+        $this->productModel = new ProductModel();
+        $this->categoryModel = new CategoryModel();
+        $this->transactionModel = new TransactionModel();
+        $this->transactionDetailModel = new TransactionDetailModel();
+        $this->settingModel = new SettingModel();
 
-        // It's better to call specific seeders if available
-        $this->seed('UserSeeder');
+        // Seed necessary data after migrations
+        // BaseFeatureTestCase does not run seeders by default unless $this->seed is set there.
+        // So, we run them here.
+        $this->seed('AdminUserSeeder'); // Corrected from UserSeeder
         $this->seed('CategorySeeder');
         $this->seed('ProductSeeder');
-        $this->seed('SettingSeeder'); // Seed the settings
+        $this->seed('SettingSeeder');
 
         // Get a user to act as
-        $userModel = new UserModel();
-        $this->user = $userModel->first(); // Get the first user created by seeder
-
-        if (!$this->user) {
-            // Fallback if seeder didn't create a user or it's not findable this way
-            $userModel->insert([
-                'name' => 'Test User',
-                'username' => 'testuser',
+        $this->loggedInUser = $this->userModel->where('role', 'admin')->get()->getRow();
+        if (!$this->loggedInUser) {
+            $this->loggedInUser = $this->userModel->first(); // Fallback
+        }
+        if (!$this->loggedInUser) {
+            // Fallback if seeder didn't create a user or it's not findable
+            $userId = $this->userModel->insert([
+                'name' => 'Test Receipt User',
+                'username' => 'receiptuser' . random_int(1000, 9999),
                 'password' => password_hash('password123', PASSWORD_DEFAULT),
                 'role' => 'admin'
             ]);
-            $this->user = $userModel->first();
+            $this->loggedInUser = $this->userModel->find($userId);
         }
+        $this->assertNotNull($this->loggedInUser, "Failed to get/create a user for tests.");
 
-        // Create a sample transaction to test receipt for
-        $productModel = new ProductModel();
-        $product = $productModel->first(); // Get a product
+
+        // Create/fetch a specific product for this test
+        $testProductName = 'Test Product for Receipt';
+        $product = $this->productModel->where('name', $testProductName)->first();
 
         if (!$product) {
-             // Fallback if seeder didn't create a product
-            $categoryModel = new CategoryModel();
-            $catId = $categoryModel->insert(['name' => 'Test Kategori Produk']);
+            $category = $this->categoryModel->first();
+            if (!$category) {
+                $catId = $this->categoryModel->insert(['name' => 'Receipt Test Cat']);
+                $category = $this->categoryModel->find($catId);
+            }
+            $this->assertNotNull($category, "Failed to get/create a category for receipt product.");
 
-            $productModel->insert([
-                'name' => 'Test Product for Receipt',
-                'code' => 'RCPT001',
-                'category_id' => $catId,
-                'price' => 10000,
-                'unit' => 'pcs',
-                'stock' => 100,
+            $productId = $this->productModel->insert([
+                'name' => $testProductName, 'code' => 'RCPT001',
+                'category_id' => $category->id, 'price' => 10000,
+                'unit' => 'pcs', 'stock' => 100,
             ]);
-            $product = $productModel->first();
+            $product = $this->productModel->find($productId);
         }
+        $this->assertNotNull($product, "Failed to get/create product named '{$testProductName}'.");
 
-        $transactionModel = new TransactionModel();
+
         $transactionData = [
-            'user_id' => $this->user->id,
+            'user_id' => $this->loggedInUser->id,
             'customer_name' => 'Customer Test Receipt',
             'total_amount' => $product->price * 2,
             'discount' => 0,
             'final_amount' => $product->price * 2,
             'payment_method' => 'cash',
-            // transaction_code will be set by model callback
         ];
-        $transactionId = $transactionModel->insert($transactionData);
-        $this->transaction = $transactionModel->find($transactionId); // Fetch to get all fields including transaction_code
+        $transactionId = $this->transactionModel->insert($transactionData);
+        $this->assertTrue($transactionId !== false, "Failed to create transaction. Errors: " . implode(', ', $this->transactionModel->errors()));
+        $this->testTransaction = $this->transactionModel->find($transactionId);
+        $this->assertNotNull($this->testTransaction, "Failed to retrieve created transaction.");
 
-        $transactionDetailModel = new TransactionDetailModel();
-        $transactionDetailModel->insert([
-            'transaction_id' => $this->transaction->id,
+
+        $detailSuccess = $this->transactionDetailModel->insert([
+            'transaction_id' => $this->testTransaction->id,
             'product_id' => $product->id,
             'quantity' => 2,
             'price_per_unit' => $product->price,
             'subtotal' => $product->price * 2,
         ]);
+        // $this->assertTrue($detailSuccess, "Failed to create transaction detail.");
+        if ($detailSuccess === false) {
+            $errors = $this->transactionDetailModel->errors();
+            $this->fail("Failed to create transaction detail. Errors: " . implode(', ', $errors));
+        }
     }
 
     public function testAccessReceiptPageSuccessfully()
     {
-        if (!$this->user || !$this->transaction) {
+        if (!$this->loggedInUser || !$this->testTransaction) {
             $this->markTestSkipped('User or transaction not set up correctly for test.');
         }
-
+        $sessionData = [
+            'user_id'    => $this->loggedInUser->id,
+            'username'   => $this->loggedInUser->username,
+            'name'       => $this->loggedInUser->name,
+            'role'       => $this->loggedInUser->role,
+            'isLoggedIn' => true,
+        ];
         // Act as the logged-in user
-        $result = $this->actingAs($this->user)
-                       ->get('/transactions/' . $this->transaction->id . '/receipt');
+        $result = $this->withSession($sessionData)
+                       ->get('/transactions/' . $this->testTransaction->id . '/receipt');
 
         $result->assertStatus(200);
-        $result->assertSee($this->transaction->transaction_code);
+        $result->assertSee($this->testTransaction->transaction_code);
 
         // Check for store info from SettingSeeder
         $settingModel = new SettingModel();
@@ -126,17 +144,24 @@ class ReceiptTest extends CIUnitTestCase
 
         $result->assertSee('Customer Test Receipt');
         $result->assertSee('Test Product for Receipt'); // Product name
-        $result->assertSee(number_format($this->transaction->final_amount, 0, ',', '.'));
+        $result->assertSee(number_format($this->testTransaction->final_amount, 0, ',', '.'));
         $result->assertSee('Cetak Struk'); // Print button
     }
 
     public function testReceiptPageForNonExistentTransaction()
     {
-        if (!$this->user) {
+        if (!$this->loggedInUser) {
             $this->markTestSkipped('User not set up correctly for test.');
         }
         $nonExistentId = 999999;
-        $result = $this->actingAs($this->user)
+        $sessionData = [
+            'user_id'    => $this->loggedInUser->id,
+            'username'   => $this->loggedInUser->username,
+            'name'       => $this->loggedInUser->name,
+            'role'       => $this->loggedInUser->role,
+            'isLoggedIn' => true,
+        ];
+        $result = $this->withSession($sessionData)
                        ->get('/transactions/' . $nonExistentId . '/receipt');
 
         $result->assertStatus(302); // Expecting a redirect

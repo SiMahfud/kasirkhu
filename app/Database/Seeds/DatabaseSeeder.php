@@ -25,6 +25,6 @@ class DatabaseSeeder extends Seeder
         // Call other seeders here
         // Example: $this->call('TransactionSeeder'); // If you create sample transactions
 
-        echo "All specified seeders run successfully from DatabaseSeeder.\n";
+        // echo "All specified seeders run successfully from DatabaseSeeder.\n";
     }
 }

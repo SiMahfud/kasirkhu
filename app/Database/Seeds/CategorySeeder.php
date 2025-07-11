@@ -43,6 +43,6 @@ class CategorySeeder extends Seeder
                  log_message('info', "Category '{$category['name']}' already exists, skipping insertion.");
             }
         }
-        echo "CategorySeeder run successfully.\n";
+        // echo "CategorySeeder run successfully.\n";
     }
 }

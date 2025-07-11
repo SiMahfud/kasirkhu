@@ -2,20 +2,14 @@
 
 namespace Tests\Feature;
 
-use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
-use CodeIgniter\Test\FeatureTestTrait;
 use App\Models\ProductModel;
 use App\Models\CategoryModel; // Untuk data dummy kategori
+use Tests\Support\Database\BaseFeatureTestCase;
 
-class ProductCRUDTest extends CIUnitTestCase
+class ProductCRUDTest extends BaseFeatureTestCase
 {
-    use DatabaseTestTrait;
-    use FeatureTestTrait;
-
-    protected $refreshDatabase = true;
-    protected $baseURL         = 'http://localhost:8080/';
-    protected $namespace       = 'App'; // Pastikan migrasi App dijalankan
+    // Traits and $namespace, $DBGroup, $baseURL are inherited from BaseFeatureTestCase
+    // $refresh is also handled by BaseFeatureTestCase's explicit migration calls.
 
     protected ProductModel $productModel;
     protected CategoryModel $categoryModel;
@@ -24,13 +18,19 @@ class ProductCRUDTest extends CIUnitTestCase
 
     protected function setUp(): void
     {
-        parent::setUp();
+        parent::setUp(); // Calls BaseFeatureTestCase::setUp for migrations
+
         $this->productModel = new ProductModel();
         $this->categoryModel = new CategoryModel();
 
-        // Seed admin user for authentication
+        // Seed necessary data after migrations have run
         $this->seed('AdminUserSeeder');
-        $adminUser = db_connect()->table('users')->where('username', 'admin')->get()->getRow();
+        // It's good practice to seed categories if products depend on them,
+        // or create them directly here if specific ones are needed.
+        // If CategorySeeder creates "Kategori Tes Produk", then this direct insert is fine.
+        // Otherwise, ensure CategorySeeder runs or $this->seed('CategorySeeder');
+
+        $adminUser = $this->db->table('users')->where('username', 'admin')->get()->getRow();
         if (!$adminUser) {
             $this->fail('Admin user "admin" not found after seeding. Check AdminUserSeeder.');
         }
@@ -43,14 +43,19 @@ class ProductCRUDTest extends CIUnitTestCase
             'isLoggedIn' => true,
         ];
 
-        // Buat kategori dummy untuk digunakan di tes produk
-        // Ensure this category is created by the admin user or accessible in a test context
-        $this->dummyCategory = $this->categoryModel->insert([
-            'name' => 'Kategori Tes Produk',
-            'description' => 'Deskripsi kategori tes'
-        ]);
-        if (!$this->dummyCategory) {
-            $this->fail('Failed to create dummy category for product tests. Errors: ' . print_r($this->categoryModel->errors(), true));
+        // Create a dummy category for product tests
+        // Check if it exists from a potential CategorySeeder first
+        $existingCategory = $this->categoryModel->where('name', 'Kategori Tes Produk')->first();
+        if ($existingCategory) {
+            $this->dummyCategory = $existingCategory->id;
+        } else {
+            $this->dummyCategory = $this->categoryModel->insert([
+                'name' => 'Kategori Tes Produk',
+                'description' => 'Deskripsi kategori tes'
+            ]);
+            if (!$this->dummyCategory) {
+                $this->fail('Failed to create dummy category for product tests. Errors: ' . print_r($this->categoryModel->errors(), true));
+            }
         }
     }
 
