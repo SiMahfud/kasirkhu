@@ -25,21 +25,34 @@
                     <a class="nav-link" href="<?= site_url('categories') ?>">Kategori</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="<?= site_url('products') // Nanti ?>">Produk</a>
+                    <a class="nav-link" href="<?= site_url('products') ?>">Produk</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="<?= site_url('products/stock') ?>">Laporan Stok</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="<?= site_url('transactions') ?>">Transaksi</a>
                 </li>
-                <!-- Tambahkan menu lain di sini -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownReports" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        Laporan
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="navbarDropdownReports">
+                        <li><a class="dropdown-item" href="<?= site_url('reports/sales/daily') ?>">Penjualan Harian</a></li>
+                        <li><a class="dropdown-item" href="<?= site_url('reports/sales/top-products') ?>">Produk Terlaris</a></li>
+                        <!-- <li><hr class="dropdown-divider"></li> -->
+                        <!-- <li><a class="dropdown-item" href="#">Laporan Lain</a></li> -->
+                    </ul>
+                </li>
             </ul>
             <ul class="navbar-nav ms-auto">
                 <?php if (session()->get('isLoggedIn')): ?>
                     <li class="nav-item">
-                        <a class="nav-link" href="<?= site_url('logout') // Nanti ?>">Logout (<?= session()->get('username') ?>)</a>
+                        <a class="nav-link" href="<?= site_url('logout') ?>">Logout (<?= session()->get('username') ?>)</a>
                     </li>
                 <?php else: ?>
                     <li class="nav-item">
-                        <a class="nav-link" href="<?= site_url('login') // Nanti ?>">Login</a>
+                        <a class="nav-link" href="<?= site_url('login') ?>">Login</a>
                     </li>
                 <?php endif; ?>
             </ul>

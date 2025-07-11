@@ -46,8 +46,9 @@
                             </td>
                             <td>
                                 <a href="<?= site_url('transactions/' . $transaction->id) ?>" class="btn btn-sm btn-info" title="Lihat Detail"><i class="fas fa-eye"></i></a>
+                                <a href="<?= site_url('transactions/' . $transaction->id . '/receipt') ?>" class="btn btn-sm btn-outline-success ms-1" title="Cetak Struk" target="_blank"><i class="fas fa-print"></i></a>
                                 <!-- Delete button with confirmation -->
-                                <?= form_open('transactions/delete/' . $transaction->id, ['class' => 'd-inline', 'onsubmit' => "return confirm('Apakah Anda yakin ingin menghapus transaksi ini?');"]) ?>
+                                <?= form_open('transactions/delete/' . $transaction->id, ['class' => 'd-inline ms-1', 'onsubmit' => "return confirm('Apakah Anda yakin ingin menghapus transaksi ini?');"]) ?>
                                     <button type="submit" class="btn btn-sm btn-danger" title="Hapus"><i class="fas fa-trash-alt"></i></button>
                                 <?= form_close() ?>
                             </td>

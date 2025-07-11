@@ -18,6 +18,8 @@ $routes->group('', ['filter' => 'auth'], static function ($routes) {
     $routes->resource('categories', ['controller' => 'CategoryController']);
 
     // Product Routes
+    $routes->get('products/stock', 'ProductController::stockReport'); // Laporan Stok
+    $routes->post('products/adjust-stock/(:num)', 'ProductController::adjustStock/$1'); // Penyesuaian Stok
     $routes->resource('products', ['controller' => 'ProductController']);
 
     // Transaction Routes
@@ -29,6 +31,12 @@ $routes->group('', ['filter' => 'auth'], static function ($routes) {
     $routes->get('transactions/edit/(:num)', 'TransactionController::edit/$1'); // Though edit is disabled
     $routes->post('transactions/update/(:num)', 'TransactionController::update/$1'); // Though update is disabled
     $routes->post('transactions/delete/(:num)', 'TransactionController::delete/$1'); // Matches form post for delete
+    $routes->get('transactions/(:num)/receipt', 'TransactionController::receipt/$1'); // Rute untuk cetak struk
+
+    // Report Routes
+    $routes->get('reports/sales/daily', 'ReportController::dailySales');
+    $routes->get('reports/sales/top-products', 'ReportController::topProducts');
+    // $routes->get('reports/sales/monthly', 'ReportController::monthlySales'); // Example for later
 
     // Tambahkan rute lain yang dilindungi di sini jika ada
     // Contoh: $routes->get('/dashboard', 'DashboardController::index');

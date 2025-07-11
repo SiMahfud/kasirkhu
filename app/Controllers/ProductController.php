@@ -190,4 +190,91 @@ class ProductController extends ResourceController
 
         return redirect()->to('/products')->with('message', 'Produk berhasil dihapus.');
     }
+
+    //--------------------------------------------------------------------
+    // Additional methods for stock management
+    //--------------------------------------------------------------------
+
+    /**
+     * Display a list of products with their stock levels.
+     *
+     * @return string
+     */
+    public function stockReport()
+    {
+        $searchTerm = $this->request->getGet('search');
+        // Fetch products with category name and stock information
+        // Only show products that are expected to have stock (e.g., not services if distinguishable)
+        // For now, showing all products that have a 'stock' column (model default behavior)
+        $productDetails = $this->model->getProductsWithCategoryDetails($searchTerm, 15, true); // true to include all, even null stock
+
+        $data = [
+            'products'   => $productDetails['products'],
+            'pager'      => $productDetails['pager'],
+            'title'      => 'Laporan Stok Produk',
+            'searchTerm' => $searchTerm,
+            'message'    => session()->getFlashdata('message'),
+            'error'      => session()->getFlashdata('error'),
+        ];
+        return view('products/stock_report', $data);
+    }
+
+    /**
+     * Process stock adjustment for a product.
+     *
+     * @param int|string|null $id Product ID
+     * @return ResponseInterface
+     */
+    public function adjustStock($id = null)
+    {
+        $product = $this->model->find($id);
+        if (!$product) {
+            return redirect()->to('/products/stock')->with('error', 'Produk tidak ditemukan.');
+        }
+
+        $rules = [
+            'adjustment_type' => 'required|in_list[add,subtract,set]',
+            'quantity'        => 'required|integer|greater_than_equal_to[0]',
+            'notes'           => 'permit_empty|string|max_length[255]'
+        ];
+
+        $messages = [
+            'adjustment_type' => ['required' => 'Jenis penyesuaian harus dipilih.', 'in_list' => 'Jenis penyesuaian tidak valid.'],
+            'quantity' => ['required' => 'Kuantitas harus diisi.', 'integer' => 'Kuantitas harus berupa angka.', 'greater_than_equal_to' => 'Kuantitas tidak boleh negatif.'],
+        ];
+
+        if (!$this->validate($rules, $messages)) {
+            return redirect()->back()->withInput()->with('error', $this->validator->listErrors());
+        }
+
+        $adjustmentType = $this->request->getPost('adjustment_type');
+        $quantity = (int)$this->request->getPost('quantity');
+        // $notes = $this->request->getPost('notes'); // For logging later if needed
+
+        $currentStock = $product->stock ?? 0; // Assume 0 if stock is null
+        $newStock = $currentStock;
+
+        switch ($adjustmentType) {
+            case 'add':
+                $newStock = $currentStock + $quantity;
+                break;
+            case 'subtract':
+                $newStock = $currentStock - $quantity;
+                if ($newStock < 0) {
+                    return redirect()->back()->withInput()->with('error', 'Stok tidak boleh menjadi negatif.');
+                }
+                break;
+            case 'set':
+                $newStock = $quantity;
+                break;
+        }
+
+        if ($this->model->update($id, ['stock' => $newStock])) {
+            // Log stock adjustment (future enhancement: create a stock_adjustments table)
+            // For now, just a success message
+            return redirect()->to('/products/stock')->with('message', 'Stok produk ' . esc($product->name) . ' berhasil disesuaikan menjadi ' . $newStock . '.');
+        }
+
+        return redirect()->to('/products/stock')->with('error', 'Gagal menyesuaikan stok produk: ' . implode(', ', $this->model->errors()));
+    }
 }

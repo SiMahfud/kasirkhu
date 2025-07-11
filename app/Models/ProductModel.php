@@ -81,10 +81,16 @@ class ProductModel extends Model
     protected $beforeDelete   = [];
     protected $afterDelete    = [];
 
-    public function getProductsWithCategoryDetails($searchTerm = null, $paginate = 10)
+    public function getProductsWithCategoryDetails($searchTerm = null, $paginate = 10, $includeAllStock = false)
     {
         $builder = $this->select('products.*, categories.name as category_name')
                         ->join('categories', 'categories.id = products.category_id', 'left');
+
+        // If $includeAllStock is false (default behavior for product index perhaps),
+        // one might add conditions like ->where('products.stock IS NOT NULL')
+        // or ->where('products.stock >', 0) if only stocked items are needed.
+        // For the stock report, we want all items, so $includeAllStock = true means no extra stock filtering.
+        // The current implementation already shows all, so no change in query logic is needed for this specific parameter yet.
 
         if ($searchTerm) {
             $builder->groupStart()
