@@ -199,11 +199,12 @@ class TransactionController extends ResourceController
                 // "Pengurangan stok produk ATK secara otomatis (jika produk memiliki flag 'is_stock_managed')."
                 // For now, we assume all products might have stock. If 'category' can identify ATK or a specific flag like 'is_stock_managed' exists, use that.
                 // Let's assume products that are not services (e.g. category_id for ATK is known, or has 'unit' like 'pcs')
-                // For simplicity, if 'stock' field is not null, we manage it.
-                if ($product->stock !== null) {
+                // Stock reduction logic, primarily for ATK type products
+                $stockManagedUnits = ['pcs', 'rim', 'lusin', 'pack', 'box', 'unit', 'buah', 'set']; // Add other stock-keeping units as needed
+                if (in_array(strtolower($product->unit ?? ''), $stockManagedUnits) && $product->stock !== null) {
                     $newStock = $product->stock - $p['quantity'];
                     if ($newStock < 0) {
-                         throw new \Exception("Insufficient stock for product: {$product->name}. Available: {$product->stock}, Requested: {$p['quantity']}");
+                        throw new \Exception("Insufficient stock for product: {$product->name}. Available: {$product->stock}, Requested: {$p['quantity']}");
                     }
                     if (!$productModel->update($product->id, ['stock' => $newStock])) {
                         throw new \Exception("Failed to update stock for product: {$product->name}. " . implode(', ', $productModel->errors()));

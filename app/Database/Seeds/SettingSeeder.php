@@ -52,6 +52,6 @@ class SettingSeeder extends Seeder
             }
         }
          // Output a message to the console
-        echo "SettingSeeder run successfully.\n";
+        // echo "SettingSeeder run successfully.\n";
     }
 }
