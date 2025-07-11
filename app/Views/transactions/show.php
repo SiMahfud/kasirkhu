@@ -60,9 +60,9 @@
                                     <td><?= $no++ ?></td>
                                     <td><?= esc($item->product_code) ?></td>
                                     <td><?= esc($item->product_name) ?></td>
-                                    <td class="text-end">Rp <?= number_format($item->price_per_unit, 0, ',', '.') ?></td>
+                                    <td class="text-end">Rp <?= number_format($item->getPricePerUnit(), 0, ',', '.') ?></td>
                                     <td class="text-center"><?= esc($item->quantity) ?></td>
-                                    <td class="text-end">Rp <?= number_format($item->subtotal, 0, ',', '.') ?></td>
+                                    <td class="text-end">Rp <?= number_format($item->getSubtotal(), 0, ',', '.') ?></td>
                                 </tr>
                             <?php endforeach; ?>
                         <?php else: ?>
@@ -75,19 +75,19 @@
                         <tr>
                             <td colspan="4"></td>
                             <td class="text-end">Total Harga</td>
-                            <td class="text-end">Rp <?= number_format($transaction->total_amount, 0, ',', '.') ?></td>
+                            <td class="text-end">Rp <?= number_format($transaction->getTotalAmount(), 0, ',', '.') ?></td>
                         </tr>
-                        <?php if ($transaction->discount > 0): ?>
+                        <?php if ($transaction->getDiscount() > 0): ?>
                         <tr>
                             <td colspan="4"></td>
                             <td class="text-end">Diskon</td>
-                            <td class="text-end">Rp <?= number_format($transaction->discount, 0, ',', '.') ?></td>
+                            <td class="text-end">Rp <?= number_format($transaction->getDiscount(), 0, ',', '.') ?></td>
                         </tr>
                         <?php endif; ?>
                         <tr>
                             <td colspan="4"></td>
                             <td class="text-end fs-5">Grand Total</td>
-                            <td class="text-end fs-5">Rp <?= number_format($transaction->final_amount, 0, ',', '.') ?></td>
+                            <td class="text-end fs-5">Rp <?= number_format($transaction->getFinalAmount(), 0, ',', '.') ?></td>
                         </tr>
                     </tfoot>
                 </table>

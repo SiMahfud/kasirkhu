@@ -33,7 +33,7 @@
                         <tr>
                             <td><?= esc($transaction->transaction_code) ?></td>
                             <td><?= esc($transaction->customer_name ?: '-') ?></td>
-                            <td>Rp <?= number_format($transaction->final_amount, 0, ',', '.') ?></td>
+                            <td>Rp <?= number_format($transaction->getFinalAmount(), 0, ',', '.') ?></td>
                             <td><?= esc(ucfirst($transaction->payment_method ?: '-')) ?></td>
                             <td><?= esc(strftime('%d %b %Y %H:%M', strtotime($transaction->created_at))) ?></td>
                             <td>

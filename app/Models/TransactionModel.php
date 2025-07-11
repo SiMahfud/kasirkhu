@@ -26,10 +26,8 @@ class TransactionModel extends Model
     protected bool $updateOnlyChanged = true;
 
     protected array $casts = [
-        'total_amount' => 'float',
-        'discount'     => 'float',
-        'final_amount' => 'float',
-        'user_id'      => 'integer', // Good practice to cast foreign keys too
+        'user_id'      => 'integer',
+        // Amount fields removed from casts
     ];
     protected array $castHandlers = [];
 

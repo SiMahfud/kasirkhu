@@ -101,16 +101,15 @@ class TransactionController extends ResourceController
         $rules = [
             'customer_name' => 'permit_empty|string|max_length[255]',
             'payment_method' => 'permit_empty|string|max_length[50]',
-            'discount' => 'permit_empty|decimal|greater_than_equal_to[0]', // Will use numeric in model, but decimal here is fine for format
-            'products' => 'required', // Temporarily removed min_length[1]
+            'discount' => 'permit_empty|decimal|greater_than_equal_to[0]',
+            'products' => 'required', // Removing min_length[1] again to simplify
             'products.*.id' => 'required|integer|is_not_unique[products.id]',
             'products.*.quantity' => 'required|integer|greater_than[0]',
         ];
 
-        // $messages for min_length can be removed or kept if rule is restored
         $messages = [
             'products.required' => 'At least one product must be added to the transaction.',
-            // 'products.min_length' => 'At least one product must be added to the transaction.',
+            // 'products.min_length' => 'At least one product item must be added to the transaction.',
         ];
 
         if (!$this->validate($rules, $messages)) {

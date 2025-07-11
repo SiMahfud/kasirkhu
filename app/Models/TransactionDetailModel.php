@@ -25,10 +25,9 @@ class TransactionDetailModel extends Model
 
     protected array $casts = [
         'quantity'       => 'integer',
-        'price_per_unit' => 'float',
-        'subtotal'       => 'float',
         'transaction_id' => 'integer',
         'product_id'     => 'integer',
+        // Amount fields removed from casts
     ];
     protected array $castHandlers = [];
 
