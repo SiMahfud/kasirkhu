@@ -12,12 +12,12 @@ Berikut adalah daftar fitur yang direncanakan untuk aplikasi ini.
 *   `[x]` : Selesai
 
 ### Manajemen Produk/Layanan
-- [ ] Tambah Produk/Layanan Baru
-- [ ] Edit Produk/Layanan
-- [ ] Hapus Produk/Layanan
-- [ ] Lihat Daftar Produk/Layanan
-- [ ] Kategori Produk/Layanan (e.g., Jasa Fotokopi, Jasa Print, ATK)
-- [ ] Pencarian Produk/Layanan
+- [x] Tambah Produk/Layanan Baru
+- [x] Edit Produk/Layanan
+- [x] Hapus Produk/Layanan
+- [x] Lihat Daftar Produk/Layanan
+- [x] Kategori Produk/Layanan (e.g., Jasa Fotokopi, Jasa Print, ATK)
+- [x] Pencarian Produk/Layanan
 - [ ] Pengelolaan Stok untuk ATK
 
 ### Transaksi Penjualan
@@ -49,6 +49,7 @@ Berikut adalah daftar fitur yang direncanakan untuk aplikasi ini.
 ### Pengaturan
 - [ ] Pengaturan Informasi Toko (Nama, Alamat, Kontak)
 - [ ] Pengaturan Pengguna (Admin, Kasir)
+    - [x] Login & Manajemen Sesi Pengguna
 - [ ] Pengaturan Printer untuk Struk
 
 ### Fitur Tambahan Spesifik Toko Khumaira
