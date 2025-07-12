@@ -13,13 +13,7 @@ class AddNameToUsersTable extends Migration
                 'type'       => 'VARCHAR',
                 'constraint' => '255',
                 'after'      => 'username'
-            ],
-            'role' => [
-                'type'       => 'VARCHAR',
-                'constraint' => '50',
-                'default'    => 'cashier',
-                'after'      => 'email'
-            ],
+            ]
         ]);
     }
 

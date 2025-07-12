@@ -13,10 +13,8 @@ class DatabaseSeeder extends Seeder
 
         // Always run UserSeeder first if other seeders depend on users (e.g. for created_by fields)
         // or if tests rely on specific users being present.
-        $this->call('AdminUserSeeder'); // Assuming this one exists and sets up initial admin
-                                     // If UserSeeder is more general, use that.
-                                     // For this project, AdminUserSeeder was mentioned in tests.
-
+        $this->call('AuthGroupSeeder');
+        $this->call('UserSeeder');
         $this->call('SettingSeeder'); // Should run early if other parts depend on settings.
 
         $this->call('CategorySeeder');
