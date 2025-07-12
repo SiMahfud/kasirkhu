@@ -22,6 +22,8 @@ class AdminUserSeeder extends Seeder
                 'username' => 'admin',
                 'email'    => 'admin@example.com',
                 'password' => 'password123', // Will be hashed by Shield's UserModel
+                'role'     => 'admin',
+                'name'     => 'Administrator',
             ]);
 
             if ($userModel->save($adminUserEntity)) {
