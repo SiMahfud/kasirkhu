@@ -28,6 +28,11 @@ class CreateUsersTable extends Migration
                 'type'       => 'VARCHAR',
                 'constraint' => '255',
             ],
+            'email' => [
+                'type'       => 'VARCHAR',
+                'constraint' => '255',
+                'unique'     => true,
+            ],
             'role' => [ // 'admin', 'cashier'
                 'type'       => 'VARCHAR',
                 'constraint' => '50',
@@ -38,6 +43,10 @@ class CreateUsersTable extends Migration
                 'null' => true,
             ],
             'updated_at' => [
+                'type' => 'DATETIME',
+                'null' => true,
+            ],
+            'deleted_at' => [
                 'type' => 'DATETIME',
                 'null' => true,
             ],
