@@ -25,28 +25,23 @@ class Database extends Config
      * @var array<string, mixed>
      */
     public array $default = [
-        // Using SQLite for development as per AGENTS.md
-        'database'    => WRITEPATH . 'khumaira.sqlite', // Path to SQLite file
-        'DBDriver'    => 'SQLite3',
+        'DSN'         => '',
+        'hostname'    => 'localhost',
+        'username'    => 'root',
+        'password'    => 'musiku3377',
+        'database'    => 'kasirkhu',
+        'DBDriver'    => 'MySQLi',
         'DBPrefix'    => '',
+        'pConnect'    => false,
         'DBDebug'     => true,
+        'charset'     => 'utf8mb4',
+        'DBCollat'    => 'utf8mb4_general_ci',
         'swapPre'     => '',
+        'encrypt'     => false,
+        'compress'    => false,
+        'strictOn'    => false,
         'failover'    => [],
-        'foreignKeys' => true, // Recommended for SQLite
-        'busyTimeout' => 1000, // Optional: SQLite specific
-        // 'DSN'          => '', // Not needed for SQLite file-based
-        // 'hostname'     => 'localhost', // Not needed for SQLite
-        // 'username'     => '', // Not needed for SQLite
-        // 'password'     => '', // Not needed for SQLite
-        // 'pConnect'     => false, // Not typically used with SQLite
-        // 'charset'      => 'utf8mb4', // SQLite uses UTF-8 by default
-        // 'DBCollat'     => 'utf8mb4_general_ci', // Collation not as relevant for SQLite
-        // 'encrypt'      => false,
-        // 'compress'     => false,
-        // 'strictOn'     => false,
-        // 'port'         => 3306, // Not needed for SQLite
-        // 'numberNative' => false,
-        // 'foundRows'    => false,
+        'port'        => 3306,
         'dateFormat'  => [
             'date'     => 'Y-m-d',
             'datetime' => 'Y-m-d H:i:s',
@@ -166,23 +161,12 @@ class Database extends Config
      * @var array<string, mixed>
      */
     public array $tests = [
-        'DSN'         => '',
-        'hostname'    => '127.0.0.1',
-        'username'    => '',
-        'password'    => '',
         'database'    => ':memory:',
         'DBDriver'    => 'SQLite3',
-        'DBPrefix'    => '',  // Setting to empty for SQLite testing consistency
-        'pConnect'    => false,
+        'DBPrefix'    => 'db_',  // A prefix is recommended for tests
         'DBDebug'     => true,
-        'charset'     => 'utf8',
-        'DBCollat'    => '',
         'swapPre'     => '',
-        'encrypt'     => false,
-        'compress'    => false,
-        'strictOn'    => false,
         'failover'    => [],
-        'port'        => 3306,
         'foreignKeys' => true,
         'busyTimeout' => 1000,
         'dateFormat'  => [
