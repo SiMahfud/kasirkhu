@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\UserModel;
+use CodeIgniter\Shield\Models\UserModel as ShieldUserModel; // Use Shield's UserModel
 use App\Models\ProductModel;
 use App\Models\CategoryModel;
 use Tests\Support\Database\BaseFeatureTestCase;
@@ -11,7 +11,7 @@ class StockManagementTest extends BaseFeatureTestCase
 {
     // Traits, $namespace, $DBGroup, $baseURL, migration handling inherited.
 
-    protected UserModel $userModel;
+    protected ShieldUserModel $userModel; // Use Shield's UserModel
     protected ProductModel $productModel;
     protected CategoryModel $categoryModel;
 
@@ -23,27 +23,32 @@ class StockManagementTest extends BaseFeatureTestCase
         parent::setUp(); // Handles migrations
 
         // Initialize models
-        $this->userModel = new UserModel();
+        $this->userModel = model(ShieldUserModel::class); // Use Shield's UserModel
         $this->productModel = new ProductModel();
         $this->categoryModel = new CategoryModel();
 
         // Seed necessary data
         $this->seed('AdminUserSeeder'); // Corrected from UserSeeder
-        $this->seed('CategorySeeder');
-        $this->seed('ProductSeeder');
+        $this->seed('CategorySeeder'); // App\Database\Seeds\CategorySeeder
+        $this->seed('ProductSeeder');  // App\Database\Seeds\ProductSeeder
 
-        $this->loggedInUser = $this->userModel->where('role', 'admin')->get()->getRow();
+        $this->loggedInUser = $this->userModel->findByCredentials(['email' => 'admin@example.com']);
         if (!$this->loggedInUser) {
-             $this->loggedInUser = $this->userModel->first();
+            $this->loggedInUser = $this->userModel->where('username', 'admin')->first(); // Fallback to username
         }
+
         if (!$this->loggedInUser) {
-            $userId = $this->userModel->insert([
-                'name' => 'Stock Test Admin',
-                'username' => 'stockadmin'  . random_int(1000,9999),
-                'password' => password_hash('password123', PASSWORD_DEFAULT),
-                'role' => 'admin'
+            log_message('error', 'Admin user not found by username or email in StockManagementTest::setUp. Attempting to create a fallback user.');
+            $tempUser = new \CodeIgniter\Shield\Entities\User([
+                'username' => 'stock_test_admin' . random_int(1000,9999),
+                'email'    => 'stock_test_admin' . random_int(1000,9999) . '@example.com',
+                'password' => 'password123'
             ]);
-            $this->loggedInUser = $this->userModel->find($userId);
+            $this->userModel->save($tempUser);
+            $this->loggedInUser = $this->userModel->findById($this->userModel->getInsertID());
+            if($this->loggedInUser){
+                 $this->loggedInUser->addGroup('admin'); // Add to admin group
+            }
         }
         $this->assertNotNull($this->loggedInUser, "Failed to get/create an admin user for stock tests.");
 
@@ -66,14 +71,8 @@ class StockManagementTest extends BaseFeatureTestCase
         if (!$this->loggedInUser) {
             $this->markTestSkipped('Admin user not available for testing stock report.');
         }
-        $sessionData = [
-            'user_id'    => $this->loggedInUser->id,
-            'username'   => $this->loggedInUser->username,
-            'name'       => $this->loggedInUser->name,
-            'role'       => $this->loggedInUser->role,
-            'isLoggedIn' => true,
-        ];
-        $result = $this->withSession($sessionData)->get('/products/stock');
+        $result = $this->actingAs($this->loggedInUser)
+                       ->get('/products/stock');
 
         $result->assertStatus(200);
         $result->assertSee('Laporan Stok Produk');
@@ -92,14 +91,8 @@ class StockManagementTest extends BaseFeatureTestCase
         $initialStock = (int)$this->testProduct->stock;
         $quantityToAdd = 5;
         $expectedStock = $initialStock + $quantityToAdd;
-        $sessionData = [
-            'user_id'    => $this->loggedInUser->id,
-            'username'   => $this->loggedInUser->username,
-            'name'       => $this->loggedInUser->name,
-            'role'       => $this->loggedInUser->role,
-            'isLoggedIn' => true,
-        ];
-        $result = $this->withSession($sessionData)
+
+        $result = $this->actingAs($this->loggedInUser)
                        ->post('/products/adjust-stock/' . $this->testProduct->id, [
                            'adjustment_type' => 'add',
                            'quantity'        => $quantityToAdd,
@@ -125,14 +118,8 @@ class StockManagementTest extends BaseFeatureTestCase
         $initialStock = (int)$this->testProduct->stock;
         $quantityToSubtract = 3;
         $expectedStock = $initialStock - $quantityToSubtract;
-        $sessionData = [
-            'user_id'    => $this->loggedInUser->id,
-            'username'   => $this->loggedInUser->username,
-            'name'       => $this->loggedInUser->name,
-            'role'       => $this->loggedInUser->role,
-            'isLoggedIn' => true,
-        ];
-        $result = $this->withSession($sessionData)
+
+        $result = $this->actingAs($this->loggedInUser)
                        ->post('/products/adjust-stock/' . $this->testProduct->id, [
                            'adjustment_type' => 'subtract',
                            'quantity'        => $quantityToSubtract,
@@ -155,14 +142,7 @@ class StockManagementTest extends BaseFeatureTestCase
         }
 
         $newStockQuantity = 15;
-        $sessionData = [
-            'user_id'    => $this->loggedInUser->id,
-            'username'   => $this->loggedInUser->username,
-            'name'       => $this->loggedInUser->name,
-            'role'       => $this->loggedInUser->role,
-            'isLoggedIn' => true,
-        ];
-        $result = $this->withSession($sessionData)
+        $result = $this->actingAs($this->loggedInUser)
                        ->post('/products/adjust-stock/' . $this->testProduct->id, [
                            'adjustment_type' => 'set',
                            'quantity'        => $newStockQuantity,
@@ -186,14 +166,8 @@ class StockManagementTest extends BaseFeatureTestCase
 
         $initialStock = (int)$this->testProduct->stock;
         $quantityToSubtract = $initialStock + 5; // Attempt to make stock negative
-        $sessionData = [
-            'user_id'    => $this->loggedInUser->id,
-            'username'   => $this->loggedInUser->username,
-            'name'       => $this->loggedInUser->name,
-            'role'       => $this->loggedInUser->role,
-            'isLoggedIn' => true,
-        ];
-        $result = $this->withSession($sessionData)
+
+        $result = $this->actingAs($this->loggedInUser)
                        ->post('/products/adjust-stock/' . $this->testProduct->id, [
                            'adjustment_type' => 'subtract',
                            'quantity'        => $quantityToSubtract
@@ -216,14 +190,7 @@ class StockManagementTest extends BaseFeatureTestCase
         if (!$this->loggedInUser || !$this->testProduct) {
             $this->markTestSkipped('Admin user or product not available for validation failure test.');
         }
-        $sessionData = [
-            'user_id'    => $this->loggedInUser->id,
-            'username'   => $this->loggedInUser->username,
-            'name'       => $this->loggedInUser->name,
-            'role'       => $this->loggedInUser->role,
-            'isLoggedIn' => true,
-        ];
-        $result = $this->withSession($sessionData)
+        $result = $this->actingAs($this->loggedInUser)
                        ->post('/products/adjust-stock/' . $this->testProduct->id, [
                            'adjustment_type' => 'invalid_type', // Invalid type
                            'quantity'        => 'abc' // Invalid quantity

@@ -113,12 +113,16 @@ Pengembangan akan dibagi menjadi beberapa tahapan (sprint) untuk memastikan prog
     *   Tes baru ditambahkan di `TransactionControllerTest.php` (`testCreateTransactionWithFotokopiServicePrice`, `testCreateTransactionWithManualPriceService`) untuk fitur ini. (Selesai)
     *   Status tes: **Semua tes terkait perhitungan spesifik kini berhasil.** Isu utama adalah `service_item_details` tidak masuk dalam `allowedFields` di `TransactionDetailModel`, sehingga tidak tersimpan ke database. Setelah ditambahkan, tes berhasil. Juga, helper `form` dan `url` ditambahkan ke `TransactionController` untuk mengatasi error pada tes lain yang muncul setelah perubahan model. (Selesai)
 
-### Sprint 4: Pengaturan dan Pengguna (Status: Belum dimulai)
-1.  **Modul Pengaturan Toko:** (Status: Belum dimulai)
-    *   Form untuk Admin mengubah informasi toko (nama, alamat, kontak, pesan di struk). Simpan di tabel `settings` atau file konfigurasi.
-2.  **Manajemen Pengguna (CRUD):** (Status: Belum dimulai)
+### Sprint 4: Pengaturan dan Pengguna (Status: Sebagian Selesai)
+1.  **Modul Pengaturan Toko:** (Status: Selesai)
+    *   Form untuk Admin mengubah informasi toko (nama, alamat, kontak, pesan di struk). Simpan di tabel `settings`.
+    *   Dilindungi oleh permission `admin.settings`.
+    *   Termasuk feature tests.
+2.  **Manajemen Pengguna (CRUD):** (Status: Selesai)
     *   Antarmuka untuk Admin menambah, melihat, mengedit, menghapus pengguna (Kasir/Admin lain).
-    *   Pengaturan role pengguna.
+    *   Pengaturan role pengguna ('admin', 'cashier').
+    *   Dilindungi oleh permissions `admin.users.list`, `admin.users.create`, `admin.users.edit`, `admin.users.delete`.
+    *   Termasuk feature tests.
 3.  **Pengaturan Printer (Panduan):** (Status: Belum dimulai)
     *   Dokumentasi singkat cara setup printer default di browser untuk pencetakan struk.
 

@@ -18,56 +18,33 @@ class BaseFeatureTestCase extends CIUnitTestCase
     // Settings for DatabaseTestTrait
     // protected $refresh = true; // We will manage migrations manually in setUp
     protected $migrateOnce = false; // Ensure migrations can run per test if needed, though setUp manages it now.
-    protected $namespace = 'App';   // Namespace for migrations and seeds
-    protected $DBGroup = 'tests';
+    // protected $namespace = 'App';   // Ensure this is null or commented out for DatabaseTestTrait to find all migrations.
+    protected $DBGroup = 'tests'; // Ensure tests run on the 'tests' DB group.
+    // protected $migrate = true; // DatabaseTestTrait default is true for $refresh.
+    // Note: $namespace is intentionally not set here to allow discovery of all migrations.
+    protected $migrate = false; // $refresh = true handles migration logic (regress then latest).
+    protected $refresh = true; // This should handle regress and then latest for all namespaces.
 
     protected function setUp(): void
     {
-        // Set environment to testing
+        // Set environment to testing if not already set
         if (ENVIRONMENT !== 'testing') {
             putenv('CI_ENVIRONMENT=testing');
             $_ENV['CI_ENVIRONMENT'] = 'testing';
+            Services::resetSingle('kint');
         }
 
-        // Call parent::setUp() to initialize traits, but DatabaseTestTrait's DB setup might be too late or problematic.
-        // We will handle DB connection and migration explicitly.
-        parent::setUp();
+        // Reset services, especially the migrator, to ensure it picks up all namespaces correctly.
+        Services::reset(true);
+        parent::setUp(); // This will now use a fresh migrator instance.
+                         // With $refresh = true, it calls regress() then latest().
+                         // With $this->namespace = null, it should discover all migrations.
 
-        // Explicitly connect to the 'tests' database group
-        // $this->db is initialized by DatabaseTestTrait through parent::setUp() if $DBGroup is set.
-        // Ensure it's the correct 'tests' group connection.
-        if ($this->db === null || $this->db->getPrefix() !== config(Database::class)->tests['DBPrefix']) {
-             $this->db = Database::connect($this->DBGroup);
-             $this->forge = Database::forge($this->DBGroup); // Re-initialize forge with this connection
-        }
-
-        // Explicitly run migrations
-        $migrations = Services::migrations(null, $this->db); // Use $this->db which is the 'tests' group connection
-        $migrations->setNamespace('App'); // Crucial for finding App's migrations
-
-        // Regress all migrations first to ensure a clean state for each test method.
-        if (!$migrations->regress(0)) {
-            $error = $migrations->errorString() ?? 'Unknown regression error';
-            log_message('error', "Migration regression failed in BaseFeatureTestCase::setUp(): " . $error);
-            // $this->fail("Migration regression failed: " . $error); // Failing here might hide other issues
-        }
-
-        // Run all migrations to the latest version
-        if (!$migrations->latest()) {
-            $error = $migrations->errorString() ?? 'Unknown migration error';
-            log_message('error', "Migrations failed in BaseFeatureTestCase::setUp(): " . $error);
-            $this->fail("Migrations failed: " . $error);
-        }
-
-        // Note: $this->seed property from DatabaseTestTrait would normally be called by parent::setUp() (via runSeeds).
-        // If we want to ensure it runs *after* our explicit migration, we might need to call it manually here,
-        // or ensure $this->seed is not set and all child classes call $this->seed('SpecificSeeder') themselves.
-        // For now, let child classes handle their own specific seeding after this explicit migration.
+        // Child classes will call their specific seeders after this parent::setUp().
     }
 
     protected function tearDown(): void
     {
         parent::tearDown();
-        // DatabaseTestTrait's tearDownTraits will handle cleanup if $refresh is true.
     }
 }

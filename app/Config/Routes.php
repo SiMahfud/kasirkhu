@@ -12,6 +12,8 @@ $routes->get('/login', 'Auth::login');
 $routes->post('/login', 'Auth::attemptLogin'); // Ini adalah rute POST untuk proses login
 $routes->get('/logout', 'Auth::logout');
 
+service('auth')->routes($routes);
+
 // Grup rute yang dilindungi autentikasi
 $routes->group('', ['filter' => 'auth'], static function ($routes) {
     // Category Routes
@@ -40,6 +42,21 @@ $routes->group('', ['filter' => 'auth'], static function ($routes) {
 
     // Tambahkan rute lain yang dilindungi di sini jika ada
     // Contoh: $routes->get('/dashboard', 'DashboardController::index');
+
+    // Settings Routes
+    $routes->get('admin/settings', 'SettingController::index');
+    $routes->post('admin/settings/update', 'SettingController::update');
+
+    // User Management Routes (Admin)
+    // $routes->resource('admin/users', ['controller' => 'UserController', 'filter' => 'auth']); // Basic resource
+    // Customizing to ensure all are under admin prefix and specific methods
+    $routes->get('admin/users', 'UserController::index', ['as' => 'admin_users_list']);
+    $routes->get('admin/users/new', 'UserController::new', ['as' => 'admin_user_new']);
+    $routes->post('admin/users/create', 'UserController::create', ['as' => 'admin_user_create']);
+    $routes->get('admin/users/edit/(:num)', 'UserController::edit/$1', ['as' => 'admin_user_edit']);
+    $routes->post('admin/users/update/(:num)', 'UserController::update/$1', ['as' => 'admin_user_update']);
+    $routes->post('admin/users/delete/(:num)', 'UserController::delete/$1', ['as' => 'admin_user_delete']); // POST for delete
+    // Note: 'show' route is not implemented in controller, so not added.
 });
 
 
