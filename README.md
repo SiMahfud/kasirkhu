@@ -47,8 +47,8 @@ Berikut adalah daftar fitur yang direncanakan untuk aplikasi ini.
 - [x] Laporan Stok ATK (Lihat sisa stok - bagian dari Pengelolaan Stok)
 
 ### Pengaturan
-- [ ] Pengaturan Informasi Toko (Nama, Alamat, Kontak)
-- [ ] Pengaturan Pengguna (Admin, Kasir)
+- [x] Pengaturan Informasi Toko (Nama, Alamat, Kontak, Pesan Struk)
+- [x] Pengaturan Pengguna (Admin, Kasir) - CRUD Pengguna
     - [x] Login & Manajemen Sesi Pengguna
 - [ ] Pengaturan Printer untuk Struk
 

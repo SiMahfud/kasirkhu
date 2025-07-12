@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\UserModel;
+use CodeIgniter\Shield\Models\UserModel as ShieldUserModel; // Use Shield's UserModel
 use App\Models\CategoryModel;
 use App\Models\ProductModel;
 use App\Models\TransactionModel;
@@ -15,7 +15,7 @@ class TransactionControllerTest extends BaseFeatureTestCase
 {
     // Traits, $namespace, $DBGroup, $baseURL, migration handling inherited.
 
-    protected UserModel $userModel; // Added type hint
+    protected ShieldUserModel $userModel; // Use Shield's UserModel
     protected CategoryModel $categoryModel;
     protected ProductModel $productModel;
     protected TransactionModel $transactionModel;
@@ -29,7 +29,7 @@ class TransactionControllerTest extends BaseFeatureTestCase
         parent::setUp(); // Handles migrations
 
         // Initialize models
-        $this->userModel = new UserModel();
+        $this->userModel = model(ShieldUserModel::class); // Use Shield's UserModel
         $this->categoryModel = new CategoryModel();
         $this->productModel = new ProductModel();
         $this->transactionModel = new TransactionModel();
@@ -41,32 +41,28 @@ class TransactionControllerTest extends BaseFeatureTestCase
         $this->seed('ProductSeeder');  // Ensure products exist
 
         // Create and prepare login for a user
-        // Attempt to find an existing user from AdminUserSeeder
-        $this->loggedInUser = $this->userModel->where('role', 'cashier')->orWhere('role', 'admin')->first();
+        $this->loggedInUser = $this->userModel->findByCredentials(['email' => 'admin@example.com']);
+        if (!$this->loggedInUser) {
+            $this->loggedInUser = $this->userModel->where('username', 'admin')->first(); // Fallback
+        }
 
         if (!$this->loggedInUser) {
-             // If no suitable user from seeder, create one
-            $username = 'testcashier' . random_int(1000, 9999);
-            $userData = [
-                'name'     => 'Test Cashier Transaction',
-                'username' => $username,
-                'password' => 'password123', // Will be hashed by UserModel
-                'role'     => 'cashier',
-            ];
-            $userId = $this->userModel->insert($userData);
-            $this->assertTrue($userId !== false, "Failed to create user for transaction test. Errors: " . implode(', ', $this->userModel->errors()));
-            $this->loggedInUser = $this->userModel->find($userId);
+             log_message('error', 'Admin user not found by username or email in TransactionControllerTest::setUp. Attempting to create a fallback user.');
+            $tempUser = new \CodeIgniter\Shield\Entities\User([
+                'username' => 'trans_test_user' . random_int(1000,9999),
+                'email'    => 'trans_test_user' . random_int(1000,9999) . '@example.com',
+                'password' => 'password123'
+            ]);
+            $this->userModel->save($tempUser);
+            $this->loggedInUser = $this->userModel->findById($this->userModel->getInsertID());
+            if($this->loggedInUser){
+                 $this->loggedInUser->addGroup('admin'); // or 'cashier' if more appropriate
+            }
         }
-        $this->assertNotNull($this->loggedInUser, "loggedInUser is null, user setup failed.");
+        $this->assertNotNull($this->loggedInUser, "loggedInUser is null, user setup failed for TransactionControllerTest.");
 
-
-        $this->loggedInUserSessionData = [
-            'user_id'    => $this->loggedInUser->id,
-            'username'   => $this->loggedInUser->username,
-            'name'       => $this->loggedInUser->name,
-            'role'       => $this->loggedInUser->role,
-            'isLoggedIn' => true,
-        ];
+        // loggedInUserSessionData is not strictly needed if using actingAs()
+        // If any test specifically uses withSession, it should be structured according to Shield's session.
 
         // Seed specific test data for transactions if ProductSeeder isn't sufficient
         // $this->seedTestData(); // This was in original, let's ensure products are there.
@@ -113,7 +109,7 @@ class TransactionControllerTest extends BaseFeatureTestCase
 
     public function testCanAccessNewTransactionPage()
     {
-        $result = $this->withSession($this->loggedInUserSessionData)
+        $result = $this->actingAs($this->loggedInUser)
                          ->get('/transactions/new');
         $result->assertOK(); // Alias for assertStatus(200)
         $result->assertSee('Buat Transaksi Baru');
@@ -140,7 +136,7 @@ class TransactionControllerTest extends BaseFeatureTestCase
             ],
         ];
 
-        $result = $this->withSession($this->loggedInUserSessionData)
+        $result = $this->actingAs($this->loggedInUser)
                          ->post('/transactions/create', $data);
 
         // Check for successful redirect and session message
@@ -174,7 +170,7 @@ class TransactionControllerTest extends BaseFeatureTestCase
 
         // Follow redirect to show page (optional, but good to check)
         // $showResult = $this->get($result->getRedirectUrl()); // This was causing PageNotFound
-        $showResult = $this->withSession($this->loggedInUserSessionData) // Ensure session continuity for the GET
+        $showResult = $this->actingAs($this->loggedInUser) // Ensure session continuity for the GET
                            ->get('transactions/' . $transaction->id);
         $showResult->assertOK();
         $showResult->assertSee($transaction->transaction_code);
@@ -183,7 +179,7 @@ class TransactionControllerTest extends BaseFeatureTestCase
     public function testCreateTransactionFailNoProducts()
     {
         $data = ['customer_name' => 'Pelanggan Gagal Produk', 'payment_method' => 'cash', 'products' => []];
-        $result = $this->withSession($this->loggedInUserSessionData)
+        $result = $this->actingAs($this->loggedInUser)
                          ->post('/transactions/create', $data);
         $result->assertRedirect();
         $result->assertSessionHas('error'); // Checks if the key 'error' exists
@@ -205,7 +201,7 @@ class TransactionControllerTest extends BaseFeatureTestCase
             'products' => [['id' => $product1->id, 'quantity' => 2]], // Request 2
         ];
 
-        $result = $this->withSession($this->loggedInUserSessionData)
+        $result = $this->actingAs($this->loggedInUser)
                          ->post('/transactions/create', $data);
         $result->assertRedirect();
         $result->assertSessionHas('error');
@@ -226,7 +222,7 @@ class TransactionControllerTest extends BaseFeatureTestCase
             'total_amount' => (string)100.0, 'final_amount' => (string)100.0, 'payment_method' => 'cash'
         ]);
 
-        $result = $this->withSession($this->loggedInUserSessionData)
+        $result = $this->actingAs($this->loggedInUser)
                          ->get('/transactions');
         $result->assertOK();
         $result->assertSee('Riwayat Transaksi');
@@ -249,7 +245,7 @@ class TransactionControllerTest extends BaseFeatureTestCase
             'quantity' => 1, 'price_per_unit' => (string)$product->price, 'subtotal' => (string)$product->price
         ]);
 
-        $result = $this->withSession($this->loggedInUserSessionData)
+        $result = $this->actingAs($this->loggedInUser)
                          ->get('/transactions/' . $transactionId);
         $result->assertOK();
         $result->assertSee('Detail Transaksi');
@@ -266,7 +262,7 @@ class TransactionControllerTest extends BaseFeatureTestCase
         ]);
         $this->assertTrue($transactionId !== false, "Failed to insert transaction for delete test. Errors: " . implode(', ', $this->transactionModel->errors()));
 
-        $result = $this->withSession($this->loggedInUserSessionData)
+        $result = $this->actingAs($this->loggedInUser)
                          ->post('/transactions/delete/' . $transactionId);
         $result->assertRedirectTo('/transactions');
         $result->assertSessionHas('message', 'Transaction soft deleted successfully.');
@@ -302,7 +298,7 @@ class TransactionControllerTest extends BaseFeatureTestCase
             ],
         ];
 
-        $result = $this->withSession($this->loggedInUserSessionData)
+        $result = $this->actingAs($this->loggedInUser)
                          ->post('/transactions/create', $data);
 
         $result->assertRedirect();

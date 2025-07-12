@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\UserModel;
+use CodeIgniter\Shield\Models\UserModel as ShieldUserModel; // Use Shield's UserModel
 use App\Models\ProductModel;
 use App\Models\CategoryModel;
 use App\Models\TransactionModel;
@@ -15,7 +15,7 @@ class ReceiptTest extends BaseFeatureTestCase
     // Traits, $namespace, $DBGroup, $baseURL, and migration handling inherited from BaseFeatureTestCase.
     // protected $seed = 'DatabaseSeeder'; // Can be set if DatabaseSeeder is desired for all tests.
 
-    protected UserModel $userModel;
+    protected ShieldUserModel $userModel; // Use Shield's UserModel
     protected ProductModel $productModel;
     protected CategoryModel $categoryModel;
     protected TransactionModel $transactionModel;
@@ -30,7 +30,7 @@ class ReceiptTest extends BaseFeatureTestCase
         parent::setUp(); // Handles migrations via BaseFeatureTestCase
 
         // Initialize models
-        $this->userModel = new UserModel();
+        $this->userModel = model(ShieldUserModel::class); // Use Shield's UserModel
         $this->productModel = new ProductModel();
         $this->categoryModel = new CategoryModel();
         $this->transactionModel = new TransactionModel();
@@ -45,22 +45,28 @@ class ReceiptTest extends BaseFeatureTestCase
         $this->seed('ProductSeeder');
         $this->seed('SettingSeeder');
 
-        // Get a user to act as
-        $this->loggedInUser = $this->userModel->where('role', 'admin')->get()->getRow();
+        // Get a user to act as (AdminUserSeeder creates 'admin' user with email 'admin@example.com')
+        $this->loggedInUser = $this->userModel->where('username', 'admin')->first();
+
         if (!$this->loggedInUser) {
-            $this->loggedInUser = $this->userModel->first(); // Fallback
+             // If seeder failed or 'admin' user is not found by username, try by email.
+            $this->loggedInUser = $this->userModel->findByCredentials(['email' => 'admin@example.com']);
         }
+
         if (!$this->loggedInUser) {
-            // Fallback if seeder didn't create a user or it's not findable
-            $userId = $this->userModel->insert([
-                'name' => 'Test Receipt User',
-                'username' => 'receiptuser' . random_int(1000, 9999),
-                'password' => password_hash('password123', PASSWORD_DEFAULT),
-                'role' => 'admin'
+            // This fallback is less ideal now as AdminUserSeeder should be robust.
+            // Creating a user here without adding to group/permissions might not work for all tests.
+            // For ReceiptTest, it might be okay if it just needs a logged-in user.
+            log_message('error', 'Admin user not found by username or email in ReceiptTest::setUp. Attempting to create a fallback user.');
+            $tempUser = new \CodeIgniter\Shield\Entities\User([
+                'username' => 'receipt_test_user' . random_int(1000,9999),
+                'email'    => 'receipt_test_user' . random_int(1000,9999) . '@example.com',
+                'password' => 'password123'
             ]);
-            $this->loggedInUser = $this->userModel->find($userId);
+            $this->userModel->save($tempUser);
+            $this->loggedInUser = $this->userModel->findById($this->userModel->getInsertID());
         }
-        $this->assertNotNull($this->loggedInUser, "Failed to get/create a user for tests.");
+        $this->assertNotNull($this->loggedInUser, "Failed to get/create a user for ReceiptTest tests.");
 
 
         // Create/fetch a specific product for this test
@@ -118,15 +124,11 @@ class ReceiptTest extends BaseFeatureTestCase
         if (!$this->loggedInUser || !$this->testTransaction) {
             $this->markTestSkipped('User or transaction not set up correctly for test.');
         }
-        $sessionData = [
-            'user_id'    => $this->loggedInUser->id,
-            'username'   => $this->loggedInUser->username,
-            'name'       => $this->loggedInUser->name,
-            'role'       => $this->loggedInUser->role,
-            'isLoggedIn' => true,
-        ];
-        // Act as the logged-in user
-        $result = $this->withSession($sessionData)
+        // Act as the logged-in user (Shield user object)
+        // The withSession method is less critical if using actingAs, but this test uses it.
+        // Ensure the session data structure is what AuthFilter expects if it checks more than just isLoggedIn.
+        // For Shield, typically just `logged_in` with user ID is enough for `auth()->user()` to work.
+        $result = $this->actingAs($this->loggedInUser)
                        ->get('/transactions/' . $this->testTransaction->id . '/receipt');
 
         $result->assertStatus(200);
@@ -154,14 +156,7 @@ class ReceiptTest extends BaseFeatureTestCase
             $this->markTestSkipped('User not set up correctly for test.');
         }
         $nonExistentId = 999999;
-        $sessionData = [
-            'user_id'    => $this->loggedInUser->id,
-            'username'   => $this->loggedInUser->username,
-            'name'       => $this->loggedInUser->name,
-            'role'       => $this->loggedInUser->role,
-            'isLoggedIn' => true,
-        ];
-        $result = $this->withSession($sessionData)
+        $result = $this->actingAs($this->loggedInUser)
                        ->get('/transactions/' . $nonExistentId . '/receipt');
 
         $result->assertStatus(302); // Expecting a redirect

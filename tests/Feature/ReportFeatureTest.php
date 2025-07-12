@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\UserModel;
+use CodeIgniter\Shield\Models\UserModel as ShieldUserModel; // Use Shield's UserModel
 use App\Models\ProductModel;
 use App\Models\CategoryModel;
 use App\Models\TransactionModel;
@@ -15,7 +15,7 @@ class ReportFeatureTest extends BaseFeatureTestCase
     use FeatureTestTrait; // Explicitly use here for testing
     // Traits, $namespace, $DBGroup, $baseURL, migration handling inherited.
 
-    protected UserModel $userModel;
+    protected ShieldUserModel $userModel; // Use Shield's UserModel
     protected ProductModel $productModel;
     protected CategoryModel $categoryModel;
     protected TransactionModel $transactionModel;
@@ -28,7 +28,7 @@ class ReportFeatureTest extends BaseFeatureTestCase
         parent::setUp(); // Handles migrations via BaseFeatureTestCase
 
         // Initialize models
-        $this->userModel = new UserModel();
+        $this->userModel = model(ShieldUserModel::class); // Use Shield's UserModel
         $this->productModel = new ProductModel();
         $this->categoryModel = new CategoryModel();
         $this->transactionModel = new TransactionModel();
@@ -39,18 +39,25 @@ class ReportFeatureTest extends BaseFeatureTestCase
         $this->seed('CategorySeeder');
         $this->seed('ProductSeeder');
         // SettingSeeder might not be directly relevant for reports but good for consistency
-        $this->seed('SettingSeeder');
+        $this->seed('SettingSeeder'); // This should be App\Database\Seeds\SettingSeeder
 
-        $this->adminUser = $this->userModel->where('role', 'admin')->get()->getRow();
+        $this->adminUser = $this->userModel->findByCredentials(['email' => 'admin@example.com']);
         if (!$this->adminUser) {
-            $this->adminUser = $this->userModel->first(); // Fallback
+            $this->adminUser = $this->userModel->where('username', 'admin')->first(); // Fallback to username
         }
+
         if (!$this->adminUser) {
-            $userId = $this->userModel->insert([
-                'name' => 'Report Test Admin', 'username' => 'reportadmin' . random_int(1000,9999),
-                'password' => password_hash('password123', PASSWORD_DEFAULT), 'role' => 'admin'
+             log_message('error', 'Admin user not found by username or email in ReportFeatureTest::setUp. Attempting to create a fallback user.');
+            $tempUser = new \CodeIgniter\Shield\Entities\User([
+                'username' => 'report_test_admin' . random_int(1000,9999),
+                'email'    => 'report_test_admin' . random_int(1000,9999) . '@example.com',
+                'password' => 'password123'
             ]);
-            $this->adminUser = $this->userModel->find($userId);
+            $this->userModel->save($tempUser);
+            $this->adminUser = $this->userModel->findById($this->userModel->getInsertID());
+            if($this->adminUser){
+                 $this->adminUser->addGroup('admin'); // Add to admin group
+            }
         }
         $this->assertNotNull($this->adminUser, "Failed to get/create an admin user for report tests.");
 
@@ -101,14 +108,6 @@ class ReportFeatureTest extends BaseFeatureTestCase
     {
         if (!$this->adminUser) $this->markTestSkipped('Admin user not found for report testing.');
 
-        $sessionData = [
-            'user_id'    => $this->adminUser->id,
-            'username'   => $this->adminUser->username,
-            'name'       => $this->adminUser->name,
-            'role'       => $this->adminUser->role,
-            'isLoggedIn' => true,
-        ];
-
         // Log actual transactions from DB for today before calling the controller
         $today_start_db = date('Y-m-d 00:00:00');
         $today_end_db = date('Y-m-d 23:59:59');
@@ -154,7 +153,7 @@ class ReportFeatureTest extends BaseFeatureTestCase
         // $this->fail("Debug: Check response body for 'Total Transaksi: 2'. Body excerpt around 'Ringkasan Periode': " . $excerpt);
 
         $result->assertSee('Total Transaksi:');
-        $result->assertSee('<strong class="fs-5">2</strong>');
+        $result->assertSee('<strong class="fs-5">2</strong>'); // This relies on exact HTML structure
         // $result->assertSee('DEBUG_TX_COUNT: 2');
     }
 
@@ -162,15 +161,9 @@ class ReportFeatureTest extends BaseFeatureTestCase
     {
         if (!$this->adminUser) $this->markTestSkipped('Admin user not found for report testing.');
 
-        $sessionData = [
-            'user_id'    => $this->adminUser->id,
-            'username'   => $this->adminUser->username,
-            'name'       => $this->adminUser->name,
-            'role'       => $this->adminUser->role,
-            'isLoggedIn' => true,
-        ];
         $yesterday = date('Y-m-d', strtotime('-1 day'));
-        $result = $this->withSession($sessionData)->get('/reports/sales/daily?from_date=' . $yesterday . '&to_date=' . $yesterday);
+        $result = $this->actingAs($this->adminUser)
+                       ->get('/reports/sales/daily?from_date=' . $yesterday . '&to_date=' . $yesterday);
 
         $result->assertStatus(200);
         $result->assertSee('Laporan Penjualan Harian');
@@ -183,7 +176,7 @@ class ReportFeatureTest extends BaseFeatureTestCase
         log_message('error', '[TestDateFilter] Expected Total Yesterday: ' . $expectedTotalYesterday . ' from P1 price ' . $p1->price);
         $result->assertSee(number_format($expectedTotalYesterday, 0, ',', '.'));
         $result->assertSee('Total Transaksi:');
-        $result->assertSee('<strong class="fs-5">1</strong>');
+        $result->assertSee('<strong class="fs-5">1</strong>'); // This relies on exact HTML structure
         // $result->assertSee('DEBUG_TX_COUNT: 1');
     }
 
@@ -194,15 +187,9 @@ class ReportFeatureTest extends BaseFeatureTestCase
         $today = date('Y-m-d');
         $yesterday = date('Y-m-d', strtotime('-1 day'));
 
-        $sessionData = [
-            'user_id'    => $this->adminUser->id,
-            'username'   => $this->adminUser->username,
-            'name'       => $this->adminUser->name,
-            'role'       => $this->adminUser->role,
-            'isLoggedIn' => true,
-        ];
         // from_date after to_date
-        $result = $this->withSession($sessionData)->get('/reports/sales/daily?from_date=' . $today . '&to_date=' . $yesterday);
+        $result = $this->actingAs($this->adminUser)
+                       ->get('/reports/sales/daily?from_date=' . $today . '&to_date=' . $yesterday);
 
         $result->assertStatus(302); // Should redirect
         $result->assertSessionHas('error', 'Tanggal mulai tidak boleh melebihi tanggal selesai.');
@@ -213,14 +200,8 @@ class ReportFeatureTest extends BaseFeatureTestCase
     {
         if (!$this->adminUser) $this->markTestSkipped('Admin user not found for report testing.');
 
-        $sessionData = [
-            'user_id'    => $this->adminUser->id,
-            'username'   => $this->adminUser->username,
-            'name'       => $this->adminUser->name,
-            'role'       => $this->adminUser->role,
-            'isLoggedIn' => true,
-        ];
-        $result = $this->withSession($sessionData)->get('/reports/sales/top-products');
+        $result = $this->actingAs($this->adminUser)
+                       ->get('/reports/sales/top-products');
         $result->assertStatus(200);
         $result->assertSee('Top 10 Produk Terlaris'); // Default limit is 10
 
@@ -239,15 +220,9 @@ class ReportFeatureTest extends BaseFeatureTestCase
         if (!$this->adminUser) $this->markTestSkipped('Admin user not found for report testing.');
 
         $today = date('Y-m-d');
-        $sessionData = [
-            'user_id'    => $this->adminUser->id,
-            'username'   => $this->adminUser->username,
-            'name'       => $this->adminUser->name,
-            'role'       => $this->adminUser->role,
-            'isLoggedIn' => true,
-        ];
         // Filter for today only
-        $result = $this->withSession($sessionData)->get('/reports/sales/top-products?from_date=' . $today . '&to_date=' . $today . '&limit=5');
+        $result = $this->actingAs($this->adminUser)
+                       ->get('/reports/sales/top-products?from_date=' . $today . '&to_date=' . $today . '&limit=5');
 
         $result->assertStatus(200);
         $result->assertSee('Top 5 Produk Terlaris');

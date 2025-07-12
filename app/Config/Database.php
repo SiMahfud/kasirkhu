@@ -25,26 +25,29 @@ class Database extends Config
      * @var array<string, mixed>
      */
     public array $default = [
-        'DSN'          => '',
-        'hostname'     => 'localhost',
-        'username'     => '',
-        'password'     => '',
-        'database'     => '',
-        'DBDriver'     => 'MySQLi',
-        'DBPrefix'     => '',
-        'pConnect'     => false,
-        'DBDebug'      => true,
-        'charset'      => 'utf8mb4',
-        'DBCollat'     => 'utf8mb4_general_ci',
-        'swapPre'      => '',
-        'encrypt'      => false,
-        'compress'     => false,
-        'strictOn'     => false,
-        'failover'     => [],
-        'port'         => 3306,
-        'numberNative' => false,
-        'foundRows'    => false,
-        'dateFormat'   => [
+        // Using SQLite for development as per AGENTS.md
+        'database'    => WRITEPATH . 'khumaira.sqlite', // Path to SQLite file
+        'DBDriver'    => 'SQLite3',
+        'DBPrefix'    => '',
+        'DBDebug'     => true,
+        'swapPre'     => '',
+        'failover'    => [],
+        'foreignKeys' => true, // Recommended for SQLite
+        'busyTimeout' => 1000, // Optional: SQLite specific
+        // 'DSN'          => '', // Not needed for SQLite file-based
+        // 'hostname'     => 'localhost', // Not needed for SQLite
+        // 'username'     => '', // Not needed for SQLite
+        // 'password'     => '', // Not needed for SQLite
+        // 'pConnect'     => false, // Not typically used with SQLite
+        // 'charset'      => 'utf8mb4', // SQLite uses UTF-8 by default
+        // 'DBCollat'     => 'utf8mb4_general_ci', // Collation not as relevant for SQLite
+        // 'encrypt'      => false,
+        // 'compress'     => false,
+        // 'strictOn'     => false,
+        // 'port'         => 3306, // Not needed for SQLite
+        // 'numberNative' => false,
+        // 'foundRows'    => false,
+        'dateFormat'  => [
             'date'     => 'Y-m-d',
             'datetime' => 'Y-m-d H:i:s',
             'time'     => 'H:i:s',
@@ -52,11 +55,11 @@ class Database extends Config
     ];
 
     //    /**
-    //     * Sample database connection for SQLite3.
+    //     * Sample database connection for SQLite3 (original example, kept for reference).
     //     *
     //     * @var array<string, mixed>
     //     */
-    //    public array $default = [
+    //    public array $sqlite_example = [ // Renamed to avoid conflict if uncommented
     //        'database'    => 'database.db',
     //        'DBDriver'    => 'SQLite3',
     //        'DBPrefix'    => '',

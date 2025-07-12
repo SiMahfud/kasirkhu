@@ -3,34 +3,85 @@
 namespace App\Database\Seeds;
 
 use CodeIgniter\Database\Seeder;
+use CodeIgniter\Shield\Entities\User as ShieldUser;
+use CodeIgniter\Shield\Models\UserModel as ShieldUserModel;
+// use CodeIgniter\Shield\Models\GroupModel; // Not used in this simplified version
 
 class AdminUserSeeder extends Seeder
 {
     public function run()
     {
-        // $userModel = new \App\Models\UserModel(); // Dihapus karena UserModel belum tentu ada/dibutuhkan di sini
+        $userModel = model(ShieldUserModel::class);
 
-        // Cek apakah UserModel sudah ada. Jika belum, kita bisa menggunakan query builder.
-        // Untuk sekarang, asumsikan UserModel akan dibuat atau sudah ada.
-        // Jika tidak, kita pakai DB Query Builder: $this->db->table('users')->insert($data);
+        // Check if admin user already exists by username
+        $admin = $userModel->where('username', 'admin')->first();
 
-        $adminData = [
-            'name'     => 'Administrator',
-            'username' => 'admin',
-            'password' => password_hash('password123', PASSWORD_DEFAULT),
-            'role'     => 'admin',
-            'created_at' => date('Y-m-d H:i:s'),
-            'updated_at' => date('Y-m-d H:i:s'),
-        ];
+        if (!$admin) {
+            log_message('debug', '[AdminUserSeeder] Admin user "admin" not found, attempting to create.');
+            $adminUserEntity = new ShieldUser([
+                'username' => 'admin',
+                'email'    => 'admin@example.com',
+                'password' => 'password123', // Will be hashed by Shield's UserModel
+            ]);
 
-        // Cek apakah user admin sudah ada
-        $existingAdmin = $this->db->table('users')->where('username', 'admin')->get()->getRow();
+            if ($userModel->save($adminUserEntity)) {
+                log_message('debug', '[AdminUserSeeder] Admin user "admin" CREATED successfully.');
 
-        if (!$existingAdmin) {
-            $this->db->table('users')->insert($adminData);
-            // echo "Admin user created.\n"; // Dihapus agar tidak mengganggu output tes
+                // Optionally, add to group and assign permissions if needed for basic tests
+                // For now, just creating the user to see if "no such column: name" is resolved.
+                $savedAdmin = $userModel->findById($userModel->getInsertID());
+                if ($savedAdmin) {
+                    // Ensure 'admin' group exists or create it
+                    $groupModel = model(\CodeIgniter\Shield\Models\GroupModel::class);
+                    $adminGroup = $groupModel->where('name', 'admin')->first();
+                    if (!$adminGroup) {
+                        $groupModel->insert([
+                            'name'        => 'admin',
+                            'description' => 'Administrator group',
+                        ]);
+                        $adminGroup = $groupModel->where('name', 'admin')->first(); // Re-fetch
+                    }
+                    if ($adminGroup) {
+                        $savedAdmin->addGroup('admin');
+                        log_message('debug', '[AdminUserSeeder] Added user "admin" to group "admin".');
+
+                        // Basic permissions for testing controllers
+                        $authorize = service('authorization');
+                        $permissions = ['admin.access', 'admin.settings', 'admin.users.list', 'admin.users.create', 'admin.users.edit', 'admin.users.delete'];
+                        foreach($permissions as $perm) {
+                            if (!$authorize->permission($perm)) {
+                                $authorize->createPermission($perm, 'Permission for ' . $perm);
+                            }
+                            $authorize->addPermissionToGroup($perm, $adminGroup->id);
+                        }
+                        log_message('debug', '[AdminUserSeeder] Assigned basic permissions to admin group.');
+                    }
+                }
+
+            } else {
+                log_message('error', '[AdminUserSeeder] FAILED to create admin user "admin". Errors: ' . json_encode($userModel->errors()));
+            }
         } else {
-            // echo "Admin user already exists.\n"; // Dihapus
+            log_message('debug', '[AdminUserSeeder] Admin user "admin" already exists.');
+            // Ensure existing admin is in admin group and has permissions
+            if (!$admin->inGroup('admin')) {
+                $admin->addGroup('admin');
+                log_message('debug', '[AdminUserSeeder] Existing admin user "admin" added to admin group.');
+            }
+             $authorize = service('authorization');
+             $adminGroup = model(\CodeIgniter\Shield\Models\GroupModel::class)->where('name', 'admin')->first();
+             if ($adminGroup) {
+                $permissions = ['admin.access', 'admin.settings', 'admin.users.list', 'admin.users.create', 'admin.users.edit', 'admin.users.delete'];
+                foreach($permissions as $perm) {
+                    if (!$authorize->permission($perm)) {
+                         $authorize->createPermission($perm, 'Permission for ' . $perm);
+                    }
+                    if (!$authorize->doesUserHavePermission($admin->id, $perm)) {
+                        $authorize->addPermissionToGroup($perm, $adminGroup->id); // Re-assign to group to be sure
+                    }
+                }
+                log_message('debug', '[AdminUserSeeder] Checked/Re-assigned basic permissions to admin group for existing admin.');
+             }
         }
     }
 }
