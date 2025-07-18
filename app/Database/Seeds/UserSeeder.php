@@ -4,58 +4,62 @@ namespace App\Database\Seeds;
 
 use CodeIgniter\Database\Seeder;
 use CodeIgniter\Shield\Entities\User;
-use CodeIgniter\Shield\Models\UserModel;
 
 class UserSeeder extends Seeder
 {
     public function run()
     {
-        // Dapatkan instance UserModel
-        $users = model(UserModel::class);
+        // 1. Dapatkan provider pengguna (UserModel)
+        $users = auth()->getProvider();
 
-        // --- Buat Super Admin ---
-        $user = new User([
+        // --- Data untuk Super Admin ---
+        $superadmin = new User([
             'username' => 'superadmin',
-            'active'   => 1, // Aktifkan user secara langsung
-        ]);
-        // Menambahkan identitas email & password
-        $user->addEmailIdentity([
             'email'    => 'superadmin@example.com',
-            'password' => 'musiku3377'
+            'password' => 'password123',
+            'name'     => 'Super Admin',
+            'role'     => 'superadmin'
         ]);
-        $users->save($user);
+        $users->save($superadmin);
 
-        // Untuk menambahkan ke grup, kita perlu mendapatkan user yang baru saja disimpan
-        $user = $users->findById($users->getInsertID());
-        // Menambahkan user ke grup 'superadmin' dan 'user'
-        $user->addGroup('superadmin', 'user');
+        // Ambil kembali data pengguna untuk mendapatkan ID dan objek utuh
+        $superadmin = $users->findById($users->getInsertID());
 
-        // --- Buat Admin Biasa ---
-        $user = new User([
+        // Tambahkan pengguna ke grup 'superadmin'
+        $superadmin->addGroup('superadmin');
+
+
+        // --- Data untuk Admin ---
+        $admin = new User([
             'username' => 'admin',
-            'active'   => 1,
-        ]);
-        $user->addEmailIdentity([
             'email'    => 'admin@example.com',
-            'password' => 'belajarlah'
+            'password' => 'password123',
+            'name'     => 'Admin',
+            'role'     => 'admin'
         ]);
-        $users->save($user);
+        $users->save($admin);
+        $admin = $users->findById($users->getInsertID());
+        
+        // Tambahkan pengguna ke grup 'admin'
+        $admin->addGroup('admin');
 
-        $user = $users->findById($users->getInsertID());
-        $user->addGroup('admin', 'user');
 
-        // --- Buat User Biasa ---
+        // --- Data untuk User Biasa ---
         $user = new User([
-            'username' => 'dian',
-            'active'   => 1,
-        ]);
-        $user->addEmailIdentity([
-            'email'    => 'dian@example.com',
-            'password' => '123456'
+            'username' => 'regularuser',
+            'email'    => 'user@example.com',
+            'password' => 'password123',
+            'name'     => 'Regular User',
+            'role'     => 'user'
         ]);
         $users->save($user);
-
         $user = $users->findById($users->getInsertID());
-        $user->addGroup('user');
+
+        // **[PERBAIKAN]** Tambahkan pengguna ke grup default secara eksplisit
+        // 1. Ambil nama grup default dari config
+        $defaultGroup = config('AuthGroups')->defaultGroup;
+
+        // 2. Gunakan metode addGroup() dengan nama grup tersebut
+        $user->addGroup($defaultGroup);
     }
 }

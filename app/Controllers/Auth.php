@@ -6,6 +6,7 @@ use CodeIgniter\Controller;
 use CodeIgniter\HTTP\ResponseInterface;
 
 use App\Models\UserModel;
+use CodeIgniter\Shield\Authentication\Authenticators\Session;
 
 class Auth extends Controller
 {
@@ -14,14 +15,14 @@ class Auth extends Controller
     public function __construct()
     {
         // Inisialisasi session jika belum otomatis
-        $this->session = service('session');
+        // $this->session = service('session');
     }
 
     public function login()
     {
         // Jika sudah login, redirect ke halaman utama (misalnya dashboard atau produk)
-        if ($this->session->get('isLoggedIn')) {
-            return redirect()->to('/'); // Ganti dengan rute dashboard jika ada
+        if (auth()->loggedIn()) {
+            return redirect()->to('/transactions'); // Ganti '/dashboard' dengan rute tujuan Anda
         }
 
         $data = [
@@ -52,34 +53,23 @@ class Auth extends Controller
             return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
         }
 
-        $userModel = new UserModel();
-        $username = $this->request->getPost('username');
-        $password = $this->request->getPost('password');
-
-        $user = $userModel->where('username', $username)->first();
-
-        if (!$user) {
-            return redirect()->back()->withInput()->with('error', 'Username tidak ditemukan.');
-        }
-
-        if (!password_verify($password, $user->password)) {
-            return redirect()->back()->withInput()->with('error', 'Password salah.');
-        }
-
-        // Login berhasil, set session
-        $sessionData = [
-            'user_id'    => $user->id,
-            'username'   => $user->username,
-            'name'       => $user->name,
-            'role'       => $user->role,
-            'isLoggedIn' => true,
+        $credentials = [
+            'username'    => $this->request->getPost('username'),
+            'password' => $this->request->getPost('password'),
         ];
-        $this->session->set($sessionData);
-        log_message('error', '[AuthController::attemptLogin] Session data set: ' . print_r($this->session->get(), true)); // LOG SESSION
 
-        // Redirect ke halaman setelah login (misalnya / atau /dashboard)
-        // Untuk sekarang, kita redirect ke halaman produk
-        return redirect()->to('/products')->with('message', 'Login berhasil! Selamat datang, ' . $user->name);
+        /** @var Session $authenticator */
+        $authenticator = auth('session')->getAuthenticator();
+
+        // 4. Lakukan upaya login menggunakan Shield
+        $result = $authenticator->attempt($credentials);
+        if (! $result->isOK()) {
+            // Jika login gagal, kembali ke form login dengan pesan error dari Shield
+            return redirect()->route('login')->withInput()->with('error', $result->reason());
+        }
+
+        return redirect()->to('/transactions')->with('message', 'Login berhasil!');
+
     }
 
     public function logout()

@@ -2,45 +2,40 @@
 
 namespace App\Models;
 
-use CodeIgniter\Model;
+// Ganti 'use CodeIgniter\Model;' dengan use dari UserModel Shield
+// use CodeIgniter\Model;
+use CodeIgniter\Shield\Models\UserModel as ShieldUserModel;
 
-class UserModel extends Model
+class UserModel extends ShieldUserModel
 {
     protected $table            = 'users';
     protected $primaryKey       = 'id';
-    protected $useAutoIncrement = true;
-    protected $returnType       = 'App\Entities\User';
-    protected $useSoftDeletes   = false; // Sesuai migrasi, tidak ada soft delete untuk users
-    protected $protectFields    = true;
-    protected $allowedFields    = ['name', 'username', 'password', 'role'];
 
-    protected bool $allowEmptyInserts = false;
-    protected bool $updateOnlyChanged = true;
+    // Izinkan kolom-kolom ini untuk diisi melalui 'save', 'insert', atau 'update'
+    // Sertakan kolom bawaan Shield DAN kolom kustom Anda
+    protected $allowedFields  = [
+        'username',
+        'status',
+        'status_message',
+        'active',
+        'last_active',
+        'deleted_at',
+        // Kolom kustom Anda
+        'nama',
+        'role',
+    ];
 
-    protected array $casts = []; // Tidak ada cast spesifik untuk saat ini
-    protected array $castHandlers = [];
-
-    // Dates
-    protected $useTimestamps = true; // Menggunakan created_at dan updated_at
-    protected $dateFormat    = 'datetime';
-    protected $createdField  = 'created_at';
-    protected $updatedField  = 'updated_at';
-    protected $deletedField  = 'deleted_at';
-
-    // Validation
-    protected $validationRules      = [];
-    protected $validationMessages   = [];
-    protected $skipValidation       = false;
-    protected $cleanValidationRules = true;
-
-    // Callbacks
-    protected $allowCallbacks = true;
-    protected $beforeInsert   = [];
-    protected $afterInsert    = [];
-    protected $beforeUpdate   = [];
-    protected $afterUpdate    = [];
-    protected $beforeFind     = [];
-    protected $afterFind      = [];
-    protected $beforeDelete   = [];
-    protected $afterDelete    = [];
+    // Tipe data untuk kolom, berguna untuk casting otomatis
+    protected $returnType     = 'CodeIgniter\Shield\Entities\User';
+    protected $useTimestamps    = true;
+    protected $skipValidation   = false;
+    
+    // Anda bisa menambahkan fungsi kustom di sini
+    // Contoh: fungsi untuk mencari semua admin
+    public function findAllAdmins()
+    {
+        return $this->join('auth_groups_users', 'auth_groups_users.user_id = users.id')
+                    ->where('auth_groups_users.group', 'admin')
+                    ->findAll();
+    }
 }
